@@ -9,6 +9,8 @@
   - [Intro and Setup](#intro-and-setup)
     - [Linux Distribution](#linux-distribution)
     - [Setup](#setup)
+      - [Updating package](#updating-package)
+      - [Device Integration](#device-integration)
     - [Snapshots](#snapshots)
   - [The Linux Terminal](#the-linux-terminal)
     - [Terminologies](#terminologies)
@@ -19,23 +21,72 @@
     - [Mastering the `Tab` key](#mastering-the-tab-key)
     - [Keyboard Shortcuts](#keyboard-shortcuts)
     - [Bash History](#bash-history)
+      - [Other variables](#other-variables)
     - [Root Access](#root-access)
+      - [Root user](#root-user)
+      - [Accessing root](#accessing-root)
+      - [Terminology](#terminology)
   - [Linux File System](#linux-file-system)
     - [Intro](#intro)
+        - [Visual Representation](#visual-representation)
+      - [Filesystem Hierarchy Standard (FHS)](#filesystem-hierarchy-standard-fhs)
+        - [Standard directory standard in linux distribution](#standard-directory-standard-in-linux-distribution)
+      - [Absolute and Relative paths](#absolute-and-relative-paths)
     - [Viewing Files](#viewing-files)
+      - [`cat`](#cat)
+      - [`less`](#less)
+      - [`head`, `tail`, `watch`](#head-tail-watch)
     - [More File Operations](#more-file-operations)
+      - [Creating Files \& Directories](#creating-files--directories)
+        - [`touch`](#touch)
+      - [Copying files and directories](#copying-files-and-directories)
+        - [`cp`](#cp)
+      - [Moving and renaming files and directories](#moving-and-renaming-files-and-directories)
+        - [`mv`](#mv)
+      - [Removing files and directories](#removing-files-and-directories)
+        - [`rm`](#rm)
+        - [`shred`](#shred)
     - [Finding Files and String](#finding-files-and-string)
+      - [Locate](#locate)
+      - [Which](#which)
+      - [Find](#find)
+      - [Pattern Searching (`grep`, `strings`)](#pattern-searching-grep-strings)
+        - [`grep`](#grep)
+        - [`strings`](#strings)
+        - [`cmp`, `diff`, `sha256`](#cmp-diff-sha256)
     - [VIM](#vim)
     - [Hard and Symlinks](#hard-and-symlinks)
+      - [The Inode Structure](#the-inode-structure)
   - [User Account Management](#user-account-management)
   - [Linux File Permission](#linux-file-permission)
   - [Linux Process Management](#linux-process-management)
     - [Processes and Linux Security Model](#processes-and-linux-security-model)
+      - [Process](#process)
+      - [Thread](#thread)
     - [Listing Processes](#listing-processes)
+      - [`ps`](#ps)
+      - [`pgrep`](#pgrep)
+      - [`pstree`](#pstree)
     - [Signals and Killing Processes](#signals-and-killing-processes)
+      - [Signal](#signal)
+      - [`killall`](#killall)
+      - [`pkill`](#pkill)
     - [Foreground vs Bakground Processes](#foreground-vs-bakground-processes)
+      - [Foreground process](#foreground-process)
+      - [Background process:](#background-process)
     - [Job Control](#job-control)
+      - [Job](#job)
   - [Networking in Linux](#networking-in-linux)
+    - [Getting information about the Network Interfaces (ip, ifconfig)](#getting-information-about-the-network-interfaces-ip-ifconfig)
+      - [`ifconfig`](#ifconfig)
+      - [`ip`](#ip)
+    - [Configuring the Network on the fly (ifconfig, ip, route)](#configuring-the-network-on-the-fly-ifconfig-ip-route)
+    - [Setting up static IP on ubuntu (netplan)](#setting-up-static-ip-on-ubuntu-netplan)
+      - [In Ubuntu 16.04 LTS](#in-ubuntu-1604-lts)
+      - [In Ubuntu 18.04 LTS](#in-ubuntu-1804-lts)
+    - [Testing and troubleshooting network connectivity](#testing-and-troubleshooting-network-connectivity)
+    - [Using SSH](#using-ssh)
+    - [Checking for listening ports (netstat, ss, lsof, telnet, nmap)](#checking-for-listening-ports-netstat-ss-lsof-telnet-nmap)
   - [Software Management](#software-management)
   - [System Administration](#system-administration)
   - [Bash Scripting](#bash-scripting)
@@ -573,7 +624,7 @@ instead of partition in other OS such as windows. To check the mounted device: `
 ## Networking in Linux
 
 ### Getting information about the Network Interfaces (ip, ifconfig)
-<i>I will be focusing on the `ip` command</i>
+<strong><i>I will be focusing on the `ip` command</i></strong>
 
 #### `ifconfig`
 - install: `sudo apt install net-tools`
@@ -598,14 +649,45 @@ instead of partition in other OS such as windows. To check the mounted device: `
 
 
 ### Configuring the Network on the fly (ifconfig, ip, route)
-`ip link set <interface-name> <status>`: set a status(“up”, “down”) of an interface
-Change IP address:
-Delete current: `ip address del 192.168.0.111/24 dev enp0s3`
-Add new: `ip address add 192.168.0.222/24 dev enp0s3`
-Change default gateway:
-Delete current: `ip route del default`
-Add new: `ip add route default via 192.168.0.1`
+- Check the current network configuration using `ip a`
+- `ip link set <interface-name> <key>`: 
+  ```bash
+  ip link set enp0s3 down # set status of interface (up or down)
+  ip link show dev enp0s3 # check interface status
+  ip link set dev enp0s3 address <mac-address> # change mac address
+  ``` 
+- Change IP address:
+  ```bash
+  ip a # show current network interfaces
+  ip address del 192.168.0.111.24 dev enp0s3 # delete interface curent address
+  ip address add 192.168.0.222/24 dev enp0s3 # add new address to interface
+  ```
+- Change default gateway:
+  ```bash
+  ip route show # show default gateway
+  ip route del default # delete default gateway
+  ip add route default via 192.168.0.1 # replace default gateway
+  ip route show 
+  ```
+- Note that configuration this way will be lost after system restart, to make it permanent have to use configuration file via `netplan`
+  
 ### Setting up static IP on ubuntu (netplan)
+#### In Ubuntu 16.04 LTS
+- config file: `/etc/network/interfaces`
+- Configuring network guide: https://ubuntu.com/server/docs/network-configuration
+
+#### In Ubuntu 18.04 LTS
+- config directory: `/etc/netplan/`
+- Disable [NetworkManager](https://en.wikipedia.org/wiki/NetworkManager#:~:text=NetworkManager%20is%20a%20daemon%20that,configuration%20of%20the%20network%20interfaces.)
+  ```bash
+  systemctl stop NetworkManager
+  systemctl disable NetworkManager
+  systemctl is-enabled NetworkManager # check status. if enabled, meaning that daemon will start at boot time
+  systemctl status NetworkManager
+  ```
+- setup by using `.yaml` file (e.g. `/etc/netplan/static.yaml`)
+- Example setup guide: https://netplan.readthedocs.io/en/stable/examples/
+- **Note**: as `netplan` is using yaml it follows 2 space identation
 
 ### Testing and troubleshooting network connectivity
 - `ping`: send echo request packet to a domain
@@ -640,7 +722,63 @@ Add new: `ip add route default via 192.168.0.1`
 - Synchronizing files and directories using rsync
 - Using rsync over the network 
 - Using `wget`
-- Checking for listening ports (netstat, ss, lsof, telnet, nmap)
+  
+### Checking for listening ports (netstat, ss, lsof, telnet, nmap)
+- `netstat`
+  - Option
+    - `-t`: show tcp ports
+    - `-u`: show udp ports
+    - `-p`: process id and the name of program that is listening
+    - `-a`: all ports (listening and not listening)
+    - `-n`: numeric addresses instead of symbolic host (e.g. 80 instead of `http`)
+  - Example `netsat -tupan`:
+  ![Netstat example](static/images/netstat_0.png "Netsat output")
+    - for "Local Address" column, anything starts with `0.0.0.0`, the process is listening to all ip address of the host
+  - Example to check open ports:
+  ![Netstat example](static/images/netstat_1.png "Netsat output 1")
+    - port 22 is listening
+    - port 80 is not open
+    - check by process name criteria
+  
+  ```console
+  sudo netstat -tupan 
+  sudo netstat -tupan | grep :22
+  ```
+  - Will dive deeper in 
+
+- `ss`: similar to `netstat`, higher performance than `netsat`
+  - common usage: `ss -tupan`
+- `lsof`: list of open files
+  ![lsof example](static/images/lsof_tcp.png "lsof output")
+  ![lsof example 2](static/images/lsof_tcp_2.png "lsof output 2")
+  ```bash
+  lsof # shows all open files
+  lsof -u root # shows by user
+  lsof -u ^root # shows NOT by user (^ is negation)
+  lsof -c nginx # shows by process
+  lsof -iTCP -sTCP:LISTEN # shows open TCP ports that is on LISTEN state
+  lsof -iTCP -sTCP:LISTEN -nP # -nP shows port and hostname in numeric format
+  lsof -iTCP:22 -sTCP:LISTEN -nP # shwos only TCP process running on port 22
+  ```
+
+- `telnet`: check other ip's port open or not
+  - Connected: if output is "Connected to host_name"
+  - Not connected: no response or connection closed
+  ```bash
+  telnet 192.168.3.0 22 # syntax: telnet <ip> <port>
+  telnet google.com 443
+  telnet google.com 25
+  ```
+  
+- `nmap`
+  ![nmap example](static/images/nmap.png "nmap example")
+  ```bash
+  sudo apt install nmap
+  sudo nmap 192.168.3.0
+  sudo nmap -p 80 linux.com -sV # -p to specify port
+  sudo nmap -p 81 linux.com -sV
+  ```
+- Will dive deeper on nmap on later [section](#security-information-gathering-and-sniffing-traffic)
 
 ## Software Management
 
