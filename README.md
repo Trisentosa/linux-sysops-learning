@@ -88,6 +88,12 @@
     - [Using SSH](#using-ssh)
     - [Checking for listening ports (netstat, ss, lsof, telnet, nmap)](#checking-for-listening-ports-netstat-ss-lsof-telnet-nmap)
   - [Software Management](#software-management)
+    - [DPKG (Debian and Ubuntu Based Distros)](#dpkg-debian-and-ubuntu-based-distros)
+    - [Intro to APT - Advanced Package Tool](#intro-to-apt---advanced-package-tool)
+    - [Using APT](#using-apt)
+    - [Compiling Programs from Source Code vs. Package Manager](#compiling-programs-from-source-code-vs-package-manager)
+    - [Compiling C Programs](#compiling-c-programs)
+    - [Compiling Software From Source Code: Lab ProFTPD](#compiling-software-from-source-code-lab-proftpd)
   - [System Administration](#system-administration)
   - [Bash Scripting](#bash-scripting)
 - [Extras](#extras)
@@ -781,6 +787,129 @@ instead of partition in other OS such as windows. To check the mounted device: `
 - Will dive deeper on nmap on later [section](#security-information-gathering-and-sniffing-traffic)
 
 ## Software Management
+
+### DPKG (Debian and Ubuntu Based Distros)
+
+- A binary package is an application package which contains executables, as opposed to
+source code. The executables are the outcomes of the compilation process
+- Deb is the installation package format used by all Debian based distributions (it’s an archive that contains other files including the executable application that was already compiled).
+- Example of debian (`.deb`) contents (e.g. Google Chrome)
+  - ![chrome_debian](static/images/chrome_debian.png "chrome_debian")
+  - contains metadata(version, release, dependencies) and application files
+- Low level infrastructure for package management (e.g. `apt` and `Synaptic` are based on `dpkg` and will call it behind the scenes)
+- **To Install a debian package manually** 
+  ```bash
+  sudo dpkg -i debian-file-name.deb
+  sudo dpkg -i debian-file-1.deb debian-file-2.deb # use this for multiple especially on cyclic dependency (see image below)
+  ```
+- ![debian](static/images/dpkg.png "debian")
+- **Other dpkg commands**
+  ```bash
+  dpkg --get-selections # get all installed programs
+  dpkg-query -l #get programs data, version, architecture
+  dpkg-query -l | grep "sudo" #get data of certain package
+  dpkg -L package-name # package name by `dpkg-query -l`
+  ```
+  - example output:
+  - ![dpkg_query](static/images/dpkg_query.png "dpkg_query")
+  - first 2 letter `ii`: **desired state** which is installed, and the **package status** which is installed
+  - the second section is the package name (in this case `google-chrome-stable`)
+  - see what package a specific file belongs to
+  ```bash
+  which -a ls # will returns path
+  dpkg -S /bin/ls # /bin/ls is the path, will return the package name (e.g. coreutils)
+  dpkg -L coreutils | less # shows all files that included in coreutils (mkdir, rm, touch, etc)
+  ```
+  - remove package
+  ```bash
+  sudo dpkg -r google-chrome-stable #doesn't remove the configuration file, just the application
+  sudo dpkg -P google-chrom-stable # remove both app and configuration file
+  ```
+
+### Intro to APT - Advanced Package Tool
+
+- The recommended way to manage software packages on Ubuntu and other Debian
+based distributions is using `apt`
+- In the newest versions of Ubuntu the `apt-get` and `apt-cache` tools were merged into a single command simply called `apt`.
+- Unlike `dpkg`, `apt` does not understand `.deb` files. It works with packages that are downloaded from repositories and calls `dpkg` directly after downloading the `.deb` archives.
+- An `APT repository` is a web server which contains a collection of packages with
+metadata that is readable by the `apt` tool. (meaning internet connection is required)
+- A special kind of repository hosted on servers like Launchpad are `PPAs` (Personal Package Archives), maintained by non-official ubuntu developers
+
+### Using APT
+
+- Only root can manage packages!
+- To update package index 
+  ```bash
+  apt update #update the package index, pull latest changes from APT repository
+  ```
+- To install package
+  ```bash
+  apt install <package-1> <package-2> ...
+  apt install <full-path-to-debian-file.deb> # installing deb file, calling dpkg behind the scenes, need to provide full path (else will assume from web server)
+  apt install <already-existp-package> # upgrade the package
+  apt full-upgrade # fully upgrade packages for the whole system
+  apt full-upgrade -y # answers "yes" to all prompts
+  ```
+- Remove package
+  ```bash
+  apt remove <package-name> #uninstall given package, but leave configuration file
+  apt purge <package-name> # remove package alongside with configuraton files
+  apt autoremove # remove unused dependencies (usually after removing some package)
+  ```
+- Ubuntu keeps every package installed on the disk
+  ```bash
+  ls /var/cache/apt/archives # directory contains all installed and upgraded packages
+  du -sh /var/cache/apth/archives/ # check archives directory size
+  apt clean # removes from the archives except the `lock` file
+  ```
+- List and search packages
+  ```bash
+  apt list
+  apt list | wc -l # counts how many packages are there
+  apt search "package-name" # find package 
+  apt search --installed # only list installed packages
+  ```
+- Other
+  ```bash
+  apt show apache2 #shows metadata of package
+  ```
+- Synaptic: package management in a GUI
+  ```bash
+  sudo apt install synaptic
+  sudo synaptic
+  ```
+
+### Compiling Programs from Source Code vs. Package Manager
+
+!["source_code_package_manager"](static/images/source_code_package_manager.png)
+
+- Example for "Access to the latest version of an application"
+  - Apache latest version from source code: https://downloads.apache.org/httpd/ (as of writing this 2.4.58)
+  - `apt show apache2`: version 2.4.18
+  !["apt_show_apache"](static/images/apt_show_apache.png)
+
+### Compiling C Programs
+
+- Install the prerequisites: `gcc`, `g++`m make
+  - Ubuntu: `sudo apt update && sudo apt install build-essential`
+  - CentOS: `sudo dnf gorup install "Development Tools"`
+- Download the source files form the official website
+- check the integrity of the tarball (hash or digital signature)
+- Extract the archive and move into the resulting directory
+- Run: `./configure --help` and set the required compilation options
+- Run: `make`
+- Run: `make install`
+  ```bash 
+  gcc --version
+  g++ --version
+
+  vim hello.c # create then write the code
+  gcc hello.c -o hello # compiling the file
+  ./hello # run the executable
+  ```
+
+### Compiling Software From Source Code: Lab ProFTPD
 
 ## System Administration
 
