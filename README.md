@@ -1001,14 +1001,122 @@ metadata that is readable by the `apt` tool. (meaning internet connection is req
   ```
 
 ### Mounting and Unmounting File Systems (`df`, `mount`, `umount`, `fdisk`, `gparted`)
+- `mount`
+  ```bash
+  mount # will show all mounted including virtual filesystems (e.g. nsfs, tmpfs)
+  mount -l -t ext4 # only shows list of certain type, in this case ext4
+
+  # say we insert a usb stick
+  mount -l -t vfat # mount of usb data
+  ls -l /media/ubuntu/<usb-name> # shows the content of the stic
+  ls -l /dev/sdb # storage device logically represented as char device in /dev. file that represents the usb stick
+  sudo fdisk -l # find the name of the device file in /dev
+  dmesg # can also observe output of dmesg to see attached device
+  lsblk # list all block devices
+
+  # to mount a filesystem
+  sudo mount -t vfat /dev/sdb /home/student/Desktop/usb # `-t vfat` is not always required, specify the type is to be more precise
+  sudo mount -o ro vfat /dev/sdb /home/student/Desktop/usb # mount with option, in this case `ro` means read only
+  ls Destop/usb #should've same data as /dev/sdb
+  mount -t vfat -l # see that for /dev/sdb mounted on /media/... and /Desktop/...
+
+  # to unmount
+  sudo umount /home/ubuntu/Desktop/usb
+  sudo umount -l /home/ubuntu/Desktop/usb # lazy unmount, unmount when not busy
+
+  # iso file
+  sudo mount /iso-file-path /mount-point-path -o loop
+  ``` 
+- `fdisk`: disk partitioning
+  - View, create, delete, change, resize, copy, move partitions on a hard drive using dialog-driven interface. Allows the user to:
+    - To Create space for new partitions.
+    - Organizing space for new drives.
+    - Re-organizing old drives.
+    - Copying or Moving data to new disks(partitions).
+  - `fdisk` basic usage
+  ```bash
+  sudo fdisk -l # view all disk partitions
+  sudo fdisk -l /dev/sda # view all disk partitions on a specific device
+  sudo fdisk /dev/sda # view all commands under disk
+  ```
+  - `fdisk` create new partition. let say we are in `sudo fdisk /dev/sda`
+  ```bash
+  n #command to create new partition
+  # specify the partition, sector size
+  w # restart to apply partittion
+  q # quit
+  ```
+  ```bash
+  sudo fdisk -l /dev/sda # check that partition is created
+  ```
+
+- `gparted`: graphical interface for managing partition
+  ```bash
+  sudo apt install gparted
+  sudo gparted 
+  ```
 
 ### Working With Device Files (`dd`)
 
+- `dd`: convert and copy files , different from `cp` as in it read and write from special device files
+```bash
+df -h # dd can use partition defined from this output
+dd if=/home/student/backup-usb.img of=/dev/sdb status=progress # write from usb image to /dev/sdb 
+```
+
 ### Getting Sytem Hardware Information (`lwhw`, `lscpu`, `lsusb`, `lscpi`, `dmidecode`, `hdparm`)
+- `lshw`: extract detailed information on the hardware configuration of the machine. 
+  - `lshw -json > hw.json`: output will be in json format
+  - `lshw -html > hw.html`: output will be in html format
+  - `lshw -s`: short summary
+  - `lshw -C disk`: get information on hard disks
+- `lscpu`: displays information about system's CPU
+  - `lscpu | grep -i mhz`: check only specific fields, e.g. the speed in megahertz
+  - `lscpu -J`: json format
+- `lsusb`: check system's usb devices
+- `lspci`: check system's information usb port, vga adapter, etc
+- `dmidecode`: dumping a computer's DMI (some say SMBIOS) table contents in a human-readable format. This table contains a description of the system's hardware components, as well as other useful pieces of information such as serial numbers and BIOS revision
+  - `dmidecode -t memory`: only check type of memory
+- `hdparm`: get, test, benchmark startup drive parameters
+  - `hdparm -i /dev/sda`: check information of hard drive 
+  - `hdparm -I /dev/sda`: check detailed information of hard drive 
+  - `hdparm -t --direct /dev/sda`: timing read test on drive
+- Most of the data from above command comes from the `/proc` filesystem 
+  - e.g. `cat /proc/meminfo`
 
 ### Intro to systemd
 
+- Most modern Linux distributions are using `SystemD` as the default init system and service manager.
+- It replaced the old `SysVinit` script system, but it’s backward compatible with `SysVinit`.
+- `systemd` starts with PID 1 as the first process, then takes over and continues to mount the host’s file systems and starts services.
+- `systemd` starts the services in parallel.
+```bash
+ps -ef | less
+systemd --version
+systemd-analyze # check info on systemd bootup time
+systemd-analyze blame # list all running unix ordered by time they need to initialize
+```
+!["systemd_init"](static/images/systemd_init.png)
+- from `ps -ef`, the `/sbin/init` is `systemd`
+
 ### Service Management  (`systemd` and `systemctl`)
+
+```bash
+sudo su
+apt update && apt install nginx
+systemctl status nginx.service # or systemctl status nginx
+systemctl stop nginx
+systemctl start nginx
+systemctl restart nginx
+systemctl reload nginx 
+systemctl reload-or-restart nginx # reload if possible, if not restart. Reload is preferable because only reload the configuration file without restarting the service.
+systemctl enable nginx # will start at boot time
+systemctl is-enabled nginx # check if service will start at boot time
+systemctl disable nginx
+systemctl mask nginx #prevent service from being started, completely unstartable
+systemctl unmask nginx
+systemctl list-units # list systemd units https://www.digitalocean.com/community/tutorials/understanding-systemd-units-and-unit-files
+```
 
 ## Bash Scripting
 
