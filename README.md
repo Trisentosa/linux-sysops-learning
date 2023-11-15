@@ -95,6 +95,13 @@
     - [Compiling C Programs](#compiling-c-programs)
     - [Compiling Software From Source Code: Lab ProFTPD](#compiling-software-from-source-code-lab-proftpd)
   - [System Administration](#system-administration)
+    - [Task Automation and Scheduling using Cron (`crontab`)](#task-automation-and-scheduling-using-cron-crontab)
+    - [Scheduling Tasks Using Anacron (`anacron`)](#scheduling-tasks-using-anacron-anacron)
+    - [Mounting and Unmounting File Systems (`df`, `mount`, `umount`, `fdisk`, `gparted`)](#mounting-and-unmounting-file-systems-df-mount-umount-fdisk-gparted)
+    - [Working With Device Files (`dd`)](#working-with-device-files-dd)
+    - [Getting Sytem Hardware Information (`lwhw`, `lscpu`, `lsusb`, `lscpi`, `dmidecode`, `hdparm`)](#getting-sytem-hardware-information-lwhw-lscpu-lsusb-lscpi-dmidecode-hdparm)
+    - [Intro to systemd](#intro-to-systemd)
+    - [Service Management  (`systemd` and `systemctl`)](#service-management--systemd-and-systemctl)
   - [Bash Scripting](#bash-scripting)
 - [Extras](#extras)
   - [Use AI and Natural Language to Administer Linux Systems (ChatGPT \& ShellGPT)](#use-ai-and-natural-language-to-administer-linux-systems-chatgpt--shellgpt)
@@ -331,8 +338,7 @@ instead of partition in other OS such as windows. To check the mounted device: `
 #### `less`
 - `more <file-path>`: show file(s) separated by line
 - `less <file-path>`: show file(s) as pages, can switch between pages 
-  - e.g. `less file1 file2`
-  - navigation guide in COMMAND section of `man less`
+  - e.g. `less file1 filetion guide in COMMAND section of `man less`
 
 
 #### `head`, `tail`, `watch`
@@ -763,7 +769,7 @@ instead of partition in other OS such as windows. To check the mounted device: `
   lsof -u ^root # shows NOT by user (^ is negation)
   lsof -c nginx # shows by process
   lsof -iTCP -sTCP:LISTEN # shows open TCP ports that is on LISTEN state
-  lsof -iTCP -sTCP:LISTEN -nP # -nP shows port and hostname in numeric format
+  lsof -iTCP -sTlCP:LISTEN -nP # -nP shows port and hostname in numeric format
   lsof -iTCP:22 -sTCP:LISTEN -nP # shwos only TCP process running on port 22
   ```
 
@@ -911,7 +917,98 @@ metadata that is readable by the `apt` tool. (meaning internet connection is req
 
 ### Compiling Software From Source Code: Lab ProFTPD
 
+- Server compiling skipped first
+
 ## System Administration
+
+### Task Automation and Scheduling using Cron (`crontab`)
+- Schedule command or tasks (cronjobs) at a specific time
+- Cron run as daemon
+  - backups
+  - monitoring resource usage
+  - updating system with latest
+  - protecting logs
+  - etc
+- Types of cronjobs: User and System wide
+  - User's crontab
+    - directory: `/var/spool/cron/crontabs` (need root access)
+    - `crontab` command: manage crontab files (technically can edit the files ourselves, but highly recommended to use `crontab` command)
+  - System wide cronjobs
+    - directory: `/etc/crontab`
+- Using `crontab`
+  ```bash
+  crontab -l # initally will show no contrab found for user
+  crontab -e # create/edit your contrab 
+  crontab -e -u ubuntu # open crontab file for specific user
+  crontab -r -u ubuntu # remove crontab of a user
+  ```
+  - each cron file must be defined within a single line with 6 fields separated by white spcae
+  - Configuration line (6 fields)
+    - first 5 line: when the job should be run, can use `*` for any (e.g. `hour` of `*` means it will run every hour)
+      - minute (m) : minimum is 1 minute, less than that must use bash script
+      - hour (h)
+      - day of month (dom)
+      - month (mon)
+      - day of week (dow)
+    - last line: command to run 
+  - Some examples:
+    ```yaml
+    0 6 * * 7 /root/backup.sh #run backup script every sunday at 6 am
+    * * * * * /root/check_space.sh # run script every minute
+    0 4,6,10 * * * /root/check_space.sh # run different time of hour
+    0 9-17 * * 1-5 /root/check_space.sh # monday to friday, 9am-5pm run this command
+    10 4,21 */3 * * /root/tasl.sh # */n means run every n . in this case run every 3 days
+    @yearly /root/happy_new_year # for yearly, monthly, weekly, daily, hourly run on midnight
+    @monthly /root/task.sh
+    @weekly /root/task.sh
+    @daily /root/task.sh
+    @hourly /path_to_script
+    @reboot /root/fiewall.sh
+    */2 * * * * date >> /tmp/date_and_time.txt # every 2 minutes output date command 
+    ```
+  - To verify its working (`*/2 * * * * date >> /tmp/date_and_time.txt`)
+  ```bash
+  tail -f /var/log/syslog # check cron log
+  cat /tmp/date_and_time.txt # check the file
+  ```
+  !["crontab"](static/images/cron_example.png)
+  - Others
+    - `/etc/cron.allow` and `/etc/cron.deny`: list of user allowed or unallowed for creating cronjobs
+    - `/etc/cron.hourly`, `etc/cron/daily`, ...: run cron as per the name suggest, for more detail can check the file `/etc/crontab`
+  - Crontab generator: https://crontab-generator.org/
+
+### Scheduling Tasks Using Anacron (`anacron`)
+
+- Similar to cron, but used on systems that are not up all the time (e.g. laptop or pc)
+- Will not run unless the system is up
+- Configuration files: `/etc/anacrontab`
+- Configuration line (4 fields)
+  - first field : day interval (e.g. 7 means run every 7 days)
+  - second field : delay in minutes, how long it will wait before executing the job (will wait if have many jobs running at once and anacron thinks it needs to wait to not overload system)
+  - third field: job identifier in form of file, created under `/var/spool/anacron`. Identify when this file is last run
+  - fourht field: command to run
+  - Example
+  ```yaml
+  # These replace cron's entries
+  1       5       cron.daily      run-parts --report /etc/cron.daily
+  7       10      cron.weekly     run-parts --report /etc/cron.weekly
+  @monthly        15      cron.monthly    run-parts --report /etc/cron.monthly
+  ```
+- `anacron`
+  ```bash
+  anacron -T # will print out error from anacron tab
+  sudo anacron -d # information about anacron jobs running
+  ```
+
+### Mounting and Unmounting File Systems (`df`, `mount`, `umount`, `fdisk`, `gparted`)
+
+### Working With Device Files (`dd`)
+
+### Getting Sytem Hardware Information (`lwhw`, `lscpu`, `lsusb`, `lscpi`, `dmidecode`, `hdparm`)
+
+### Intro to systemd
+
+### Service Management  (`systemd` and `systemctl`)
 
 ## Bash Scripting
 
