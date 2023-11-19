@@ -58,6 +58,13 @@
     - [Intro to systemd](#intro-to-systemd)
     - [Service Management  (`systemd` and `systemctl`)](#service-management--systemd-and-systemctl)
   - [Bash Scripting](#bash-scripting)
+    - [Bash Aliases](#bash-aliases)
+    - [Bash Shell Scripting](#bash-shell-scripting)
+    - [The Bash Shebang and Comments](#the-bash-shebang-and-comments)
+    - [Variables in Bash](#variables-in-bash)
+    - [Environment Variables](#environment-variables)
+    - [Getting User Input](#getting-user-input)
+- [Special Variables and Positional Arguments](#special-variables-and-positional-arguments)
 - [Extras](#extras)
   - [Use AI and Natural Language to Administer Linux Systems (ChatGPT \& ShellGPT)](#use-ai-and-natural-language-to-administer-linux-systems-chatgpt--shellgpt)
   - [Configure a Linux Server from Scratch (VPS,DNS,WEB,PHP,MySQL,Wordpress)](#configure-a-linux-server-from-scratch-vpsdnswebphpmysqlwordpress)
@@ -1071,6 +1078,204 @@ systemctl list-units # list systemd units https://www.digitalocean.com/community
 ```
 
 ## Bash Scripting
+
+### Bash Aliases 
+- Basically shortcut command
+- `alias`: 
+  - to see list of current alias
+  - !["alias"](static/images/alias.png)
+- To create:
+  ```bash
+  \ls # use `\` in front to run the original `ls` command
+  alias c=clear # set alias, this one only in that terminal session
+  vim .bashrc # need to set alias inside this file for persistent | e.g. alias now="date +%F\ %T"
+  ```
+  - for command with whitespace, use "" (e.g. alias ll="ls -l")
+
+### Bash Shell Scripting
+- Shell Review: Program takes command from user through keyboard and gives them to OS kernel to get executed. Also called commmand interpreter (accept command from user and checks them if the syntax is correct before sending them to OS kernel to be executed)
+- Shell Script: regular text file which contains shell command
+- Shell started when user logged in or terminal is started
+```bash
+echo $0 # checks the current shell that is running 
+cat /etc/shells # return all the available shells in your system
+cat /etc/passwd # can check from here what is the default shell of each user
+cat /etc/passwd | grep "ubuntu" # output -> ubuntu:x:1000:1000:ubuntu,,,:/home/ubuntu:/bin/bash
+```
+- Example: (note: as mentioned in previous section, extension in linux is optional, so some practices consider using `.sh` as bad practice, just keep that in mind)
+```bash
+vim first_script.sh # create the script
+./first_script.sh
+first_script.sh # this or first_script doesn't work ("command not found" error)
+```
+
+```bash
+# first_script.sh
+mkdir -p dir1
+echo "some text" > dir1/file.txt
+ls -l dir1
+cat dir1/file.txt
+```
+- Note that running `first_script.sh` doesn't work. the reason is by default the shell is reading from the PATH variable. So to run script from non-path directory, need to specify absolute or relative path
+```bash
+echo $PATH # see the paths of your system
+cp scripts/first_script.sh /usr/local/sbin # copy your scripts to the path
+first_script.sh # this works now
+```
+
+### The Bash Shebang and Comments
+- `shebang`: 
+  - this term refers to which program to run as interpreter as the script file as argument (in other words, which program to run the file; bash, python, c, etc)
+  - without `shebang`, it will use default shell which is `bash`
+  - `shebang` is defined in the first line of your script, and the format is `#!<path-to-your-interpreter>`
+```bash
+which -a bash # check the path of your interpreter program 
+ls -li /bin/bash /usr/bin/bash # since which returns 2 files, this one to verify if both files are the same (yes, they both have the same inode number)
+```
+- Example
+```bash
+vim pyscript
+chmod 700 pyscript
+which python3 # check path of python interpreter
+./pysript # if not set the shebang, got lots of error
+```
+
+```python
+#!/usr/bin/python3
+import sys
+print(sys.version)
+```
+- Alternatively, run script using interpreter name in terminal. This way doesn't need execution permission.
+```bash
+chmod -x scripts/pyscript # remove execute permission
+python3 pyscript # still works
+bash first_script.sh
+```
+  - **However**, take note the difference between `./pyscript` vs `python3 pyscript`
+  - The first one runs the script in a new subshell
+  - The second one runs the script in that current shell that is running in the terminal
+
+- comments:
+  - bash ignore everything after `#` except for `#!` which is `shebang`
+
+### Variables in Bash
+- `bash` is weakly typed, meaning that the type is automatically is assigned to a variable
+- Some things about bash variable:
+  - No floating point number, just integer. Meaning floating point will be treated as string
+  - Variable naming can't lead with a number
+  - Variable naming can't have any special symbols except for underscore(`_`)
+  - Can use combination of underscore, capital, lower letter, number(as long as not in front)
+- To create:
+```bash
+os=Linux # set variable, NO spaces between `=`
+distro="MX Linux" #multi word, use ""(quotation)
+echo $distro # output the variable value
+echo "my os is $os and my distro is $distro" # can use $<var-name> -> my os is Linux and my distro is MX Linux
+echo 'my os is $os and my distro is $distro' # but if use single quote, ignored the $ sign -> my os is $os and my distro is $distro
+echo "the value \$os is $os" # can also use escape string `\` -> the value $os is Linux
+
+# some other examples
+mydistro="$os $distro" 
+echo $mydistro
+
+#set
+set # list of variables
+set | grep "distro" # can just grep to check
+unset distro # remove the variable, no dollar($) sign
+
+#declare: content of variable doesn't change, read only variable
+declare -r logdir="var/log"
+logdir="test test" # can't write new value
+cd $logdir
+```
+
+### Environment Variables
+- Environment Variables:
+  - Defined for the current shell and are inherited by any child shells or processes
+  - Used to pass information to processes that are spawned form the current shell
+  - Displayed using `env` or `printenv`
+    - with `printenv` can pass arguments which is the variables name (e.g. `printenv HOME SHELL`)
+  - By default all caps letter (e.g. PATH, HOME, etc)
+
+- Shell Variables
+  - Contained exclusively within the shell in which they were set or defined
+  - Displayed using `set`
+    - the `set` command also prints out the shell functions
+    - to not print shell functions, do `set -o posix` then `set`
+  - `export`: while regular assign like `a=5` makes variable available to the current shell session, the `export` makes it environment variable, check detail [here](https://www.baeldung.com/linux/bash-variables-export)
+
+- User configuration file: `~/.bashrc`
+```bash
+# modify env variables from startup scripts (e.g. .bashrc)
+vim ~/.bashrc
+
+# restart the terminal
+file_stat.sh # works because now scripts directory is in PATH
+```
+```bash
+# .bashrc file, add this line at the end
+export PATH=$PATH:~/scripts
+```
+
+- System-wide configuration file: `/etc/bash.bashrc` and `/etc/profile`
+
+### Getting User Input
+- `read`
+  - bash default command to take input
+  - Stops execution until user input + enter
+  ```bash
+  read name
+  echo $name
+  read -p "Enter the IP address: " ip # with description `-p`
+  echo $ip
+  read -s -p "Enter password: "pswd # -s to not echo value input by user
+  ```
+  - Example: drop all packets coming from certain IP
+    - Test the command
+    ```bash
+    ping 8.8.8.8 # works
+    sudo iptables -I INPUT -s 8.8.8.8 -j DROP
+    ping 8.8.8.8 # fail, great!
+    ```
+    - Now write the script (don't forget to add execute permission after `chmod +x block_ip.sh`)
+    ```bash
+    #!/bin/bash
+    read -p "Enter the IP address of domain to block: " ip
+    iptables -I INPUT -s $ip -j DROP
+    echo "The packets from $ip will be dropped."
+    ```
+    - Test
+    ```bash
+    ping 1.1.1.1 #ok
+    sudo ./block_ip.sh #enter 1.1.1.1
+    ping 1.1.1.1 #fails
+    ```
+
+# Special Variables and Positional Arguments
+- Details:
+  - e.g. `./script.sh filename1 dir1 10.0.0.1`
+  - `$0`: name of the script itself (`./script.sh`)
+  - `$1`: first positional argument (`filename1`)
+  - `$2`: second positional argument (`dir1`)
+  - `$3`: last argument of the script (`10.0.0.1`)
+  - `$9`: ninth argument, for >9 need curly braces -> `${10}` the tenth and so on
+  - `$#`: number of positional arguments
+  - `$*`: string representation of all positional arguments: $1, $2, $3, ...
+  - `$?`: foreground command exit status
+- Example: from drop ip packets previous section (just `cp` the `block_ip.sh`)
+  - modify script
+  ```bash
+  #!/bin/bash
+  echo "Dropping packets from $1..."
+  iptables -I INPUT -s $1 -j DROP
+  echo "The packets from $1 will be dropped."
+  ```
+  - test
+  ```bash
+  ping 31.13.95.35
+  sudo ./drop_ip.sh 31.13.95.35
+  ping 31.13.95.35
+  ```
 
 # Extras
 
