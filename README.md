@@ -876,7 +876,59 @@ metadata that is readable by the `apt` tool. (meaning internet connection is req
 
 ### Compiling Software From Source Code: Lab ProFTPD
 
-- Server compiling skipped first
+- For this exercise, we will compile FTP server (Proftpd, open source): http://proftpd.org/
+- ![proftpd](static/images/proftpd.png)
+- Right click on `gz` for `maintenance` version and copy link address
+```bash
+wget -c ftp://ftp.proftpd.org/distrib/source/proftpd-1.3.8a.tar.gz
+sha256sum proftpd-1.3.8a.tar.gz # verify this result with the one in "Downloads" signature tab, should be the same
+tar -xzvf proftpd-1.3.8a.tar.gz  # extract
+cd proftpd-1.3.8a/
+```
+- Detail about the downloaded software:
+  - source code is in `src` directory
+  - `configure` file:
+    - does 2 things
+      - checking if requirement and dependency satisfied
+      - configuring how the program will be compiles (which option enabled or not)
+    - *will throw error if wrong configuration*
+    - *recommended to run configure with non-privilege user, and only last step configuration using root*
+    - `--prefix`: install architecture-independent files in PREFIX, this one by default is `/usr/local`. By standard, external programs not controlled by package manager are saved under `opt` directory
+  - `Makefile`:
+    - created after configuring completed
+    - will enable the `make` command 
+    - `make`: gnu utility to build the application, running the agnostic compiler multiple files
+```bash
+./configure --help | less # reading the doc, configurable options and default option value.
+./configure --prefix=/opt/proftp # if failed can fix it, most likely is dependency error
+make # if fail, can check using `make lint`
+sudo make install # last step, done, FTP server is installed
+cd ..
+rm -rf proftpd-1.3.8a # can remove
+
+# running it
+cd /opt/proftpd
+cd sbin
+sudo ./proftpd & # run it as daemon
+ps -ef | grep "proftpd" # check process running
+sudo pkill proftpd # kill the process
+
+#testing it
+sudo ./proftpd -n #run it in foreground
+
+#configuration
+ls -l /opt/proftpd/etc/ # proftpd.conf inside this /etc dir
+```
+  - To test:
+    - run it in the foreground `sudo ./proftpd -n`
+    - go to `file-zilla.org` and download it
+    - enter your server information and connect (ftp default port is 21)
+    - should be able to display local files in remote ftp
+
+- To simplify above steps, can be done in one command: 
+  - `./configure  --prefix=/opt/proftpd1 && make && sudo make install`
+
+
 
 ## System Administration
 
