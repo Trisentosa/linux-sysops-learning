@@ -68,6 +68,19 @@
 - [Extras](#extras)
   - [Use AI and Natural Language to Administer Linux Systems (ChatGPT \& ShellGPT)](#use-ai-and-natural-language-to-administer-linux-systems-chatgpt--shellgpt)
   - [Configure a Linux Server from Scratch (VPS,DNS,WEB,PHP,MySQL,Wordpress)](#configure-a-linux-server-from-scratch-vpsdnswebphpmysqlwordpress)
+    - [Overview: The Big Picture](#overview-the-big-picture)
+    - [Running a Linux Server in the Cloud](#running-a-linux-server-in-the-cloud)
+    - [Securing SSH with Key Authentication](#securing-ssh-with-key-authentication)
+    - [Getting a Domain Name](#getting-a-domain-name)
+    - [Diving into the DNS Protocol and Installing a DNS Server (Bind9)](#diving-into-the-dns-protocol-and-installing-a-dns-server-bind9)
+    - [Setting up the Authorative BIND9 DNS Server](#setting-up-the-authorative-bind9-dns-server)
+    - [Installing a Web Server(Apache2)](#installing-a-web-serverapache2)
+    - [Setting Up Virtual Hosting](#setting-up-virtual-hosting)
+    - [Securing Apache with OpenSSL and Digital Certificates](#securing-apache-with-openssl-and-digital-certificates)
+    - [Installing PHP](#installing-php)
+    - [Installing and Securing MySQL Server](#installing-and-securing-mysql-server)
+    - [Installing a Web Application (WordPress)](#installing-a-web-application-wordpress)
+    - [Securing WordPress](#securing-wordpress)
   - [Security: Information Gathering and Sniffing Traffic](#security-information-gathering-and-sniffing-traffic)
   - [IPFS: Interplanetary File System](#ipfs-interplanetary-file-system)
   - [Netfilter and Iptables Firewall](#netfilter-and-iptables-firewall)
@@ -1334,6 +1347,246 @@ export PATH=$PATH:~/scripts
 ## Use AI and Natural Language to Administer Linux Systems (ChatGPT & ShellGPT)
 
 ## Configure a Linux Server from Scratch (VPS,DNS,WEB,PHP,MySQL,Wordpress)
+
+### Overview: The Big Picture
+
+**Objective: Setup, configure, secure DNS, web, and sql servers and make them work together**
+
+Components
+-  VPS (Digital Ocean): to host our linux server in cloud 
+-  Domain Name
+-  DNS Server (BIND9): most well known authorative DNS server, allow any internet user to communicate with the server
+-  Website builder (WordPress)
+-  [LAMP Stack](https://en.wikipedia.org/wiki/LAMP_(software_bundle)) 
+   -  Web Server (Apache/Nginx): this course will use Apache
+   -  Backend (PHP/python/etc)
+   -  Database (SQL)
+
+### Running a Linux Server in the Cloud
+
+- [VPS](https://en.wikipedia.org/wiki/Virtual_private_server)(Virtual Private Server): host and manage your server from cloud, we'll be using [digital ocean](https://www.digitalocean.com/)
+- To Create:
+  - Create a `Droplet`(digital ocean's VPS product)
+  - Choose Ubuntu as distribution
+  - For now, use `password` type authentication
+  - Create 1 droplet instance for now
+- To access:
+  1. via SSH (**recommended**) 
+  2. via `Console` in the droplet page
+
+![d:igitalocean_droplet](static/images/digitalocean_droplet.png)
+
+- To setup SSH:
+  - `ipv4`: provided static public ip address, will not change
+  ```bash
+  ssh -p 22 root@157.245.206.52 
+  #once inside container
+  apt update && apt full-upgrade -y
+  ```
+
+### Securing SSH with Key Authentication
+
+1. Generate a key pair (private, public) key pair
+```bash
+ssh-keygen -t rsa -b 2048 -C 'new key'
+```
+2. Add public key (`id_rsa.pub`):
+   - Project -> Settings -> Security -> Add SSH Key -> paste public ssh key
+3. Append content to authorized key file:`ssh-copy-id -i <private-ssh-key-path> root@<server-ip-address>`
+4. Now try `ssh root@<server-ip-address>`
+5. In VPS
+```bash
+vim /etc/ssh/sshd_config
+# change "Password Authentication" to "No"
+```
+
+### Getting a Domain Name
+
+- To understand DNS better:
+  - Install [Wireshark](https://www.wireshark.org/)
+  - Start capturing traffic and filter the result `dns || http` to only shows DNS or HTTP request
+  - Go to a website and check it's traffic
+  - To check a domain's ip, can use `ping <domain>`, `dig <domain>`, `nslookup <domain>`, `host <domain>`
+- Get a domain name: 
+  - Paid: `namecheap.com`, `godaddy.com`
+  - Free: `freenom.com`
+- Setting up Authorative DNS Server (`namcheap`)
+  - set personal dns server in `Advanced DNS` tab
+  ![namecheap_dns](./static/images/namecheap_dns.png)
+  - set nameservers in `Domain` tab
+  ![namecheap_namserver](./static/images/namecheap_nameserver.png)
+
+### Diving into the DNS Protocol and Installing a DNS Server (Bind9)
+- [Bind9](https://www.isc.org/bind/): popular DNS software 
+- Setup Bind9 in your VPS
+  ```bash
+  apt update && apt install bind9 bind9utils bind9-doc
+  systemctl status bind9
+  vim /etc/default/named #startup option for the server, we set to ipv4
+  systemctl reload-or-restart bind9
+  dig -t a @localhost google.com # check bind9 dns
+  cat /etc/bind/named.conf # primary configuration files
+  ```
+  ```bash
+  # /etc/default/named
+  #
+  # run resolvconf?
+  RESOLVCONF=no
+
+  # startup options for the server
+  OPTIONS="-u bind -4" #set this `-4` to use ipv4 or `-6` for ipv6
+  ```
+- Process daemon that is running for `Bind9` is called `named`(name daemon)
+- The main configuration file `/etc/bind/named.conf` includes 3 other files
+  - `/etc/bind/named.conf.options`: general server configuration options (e.g. interface which it listens)
+  - `/etc/bind/named.conf.local`: domains hosted on the server for which it is authorative
+  - `/etc/bind/named.conf.default-zones`: information about host server and default zones (not touch too much)
+- DNS Queries
+  - `Recursive`: A recursive query is a kind of query, in which the DNS server, that received your query,will do all the job, fetching the answer, and giving it back to you. In the end, you’ll get the final answer.
+  - `Iterative`: The DNS name server will not go and fetch the complete answer for your query but will give back a referral to other DNS servers, which might have the answer. Now it’s your job to query those servers and find the answer.
+- DNS Forwarder
+  - A `forwarder` is another DNS server that will be queried recursively by our server.
+  - A DNS server, configured to use a forwarder, behaves as follows:
+    1. When the DNS server receives a query, it attempts to resolve this query.
+    2. If the query cannot be resolved using local data, the DNS server forwards the query
+    recursively to the DNS server that is designated as a forwarder.
+    3. If the forwarder is not unavailable, the DNS server attempts to resolve the query by itself, using iterative queries.
+  - Setting a `forwarder`: add `forwarders` directive inside `/etc/bind/named.conf.options`
+    ```bash
+    options {
+          directory "/var/cache/bind";
+          // If there is a firewall between you and nameservers you want
+          // to talk to, you may need to fix the firewall to allow multiple
+          // ports to talk.  See http://www.kb.cert.org/vuls/id/800113
+
+          // If your ISP provided one or more IP addresses for stable
+          // nameservers, you probably want to use them as forwarders.
+          // Uncomment the following block, and insert the addresses replacing
+          // the all-0's placeholder.
+
+          // forwarders {
+          //      0.0.0.0;
+          // };
+
+          //========================================================================
+          // If BIND logs error messages about the root key being expired,
+          // you will need to update your keys.  See https://www.isc.org/bind-keys
+          //========================================================================
+          dnssec-validation auto;
+
+          listen-on-v6 { any; };
+          forwarders {
+                  8.8.8.8;
+                  8.8.4.4;
+          };
+    };
+    ```
+  - reload the server `systemctl reload-or-restart bind9`
+
+### Setting up the Authorative BIND9 DNS Server
+- `Authoritative Domain Server`: basically the DNS server that holds the record to your server, final destination of other DNS server that queries your domain
+- Can have multiple authoritative servers, the primary being "master" server and the other being the "slave" server
+- To find out the Authoritative server (e.g. `google.com`): `dig -t ns google.com`
+- To check the IP of that authoritative server: `dig -t a ns1.google.com`
+- setup master authoritave dns server for the domain , vim to `/etc/bind/named.conf.local`
+  ```
+  //
+  // Do any local configuration here
+  //
+
+  // Consider adding the 1918 zones here, if they are not used in your
+  // organization
+  //include "/etc/bind/zones.rfc1918";
+
+  zone "trisentosa.xyz" {
+          type master;
+          file "/etc/bind/db.trisentosa.xyz";
+  }
+  ```
+- creating a zone file to store the records
+  - first copy bind db template to your zone file: `cp /etc/bind/db.empty /etc/bind/db.trisentosa.xyz`
+  - `vim /etc/bind/db.trisentosa.xyz`
+  - Initial content and explanation:
+    - `;`: comments
+    - `$`: directives
+    - `@`: dns records, 2 are mandatory (for valid, domain must end with a dot(`.`), e.g. `localhost.`):
+      - `SOA`: Start authority record 
+      - `NS`: Name server record (master/slave) for this domain
+  ```bind
+  ; BIND reverse data file for empty rfc1918 zone
+  ;
+  ; DO NOT EDIT THIS FILE - it is used for multiple zones.
+  ; Instead, copy it, edit named.conf, and use that copy.
+  ;
+  $TTL    86400
+  @       IN      SOA     localhost. root.localhost. (
+                                1         ; Serial
+                          604800         ; Refresh
+                            86400         ; Retry
+                          2419200         ; Expire
+                            86400 )       ; Negative Cache TTL
+  ;
+  @       IN      NS      localhost.
+  ```
+  - Modified:
+  ```bind
+  ; BIND reverse data file for empty rfc1918 zone
+  ;
+  ; DO NOT EDIT THIS FILE - it is used for multiple zones.
+  ; Instead, copy it, edit named.conf, and use that copy.
+  ;
+  $TTL    86400
+  @       IN      SOA     ns1.trisentosa.xyz. root.localhost. (
+                                1         ; Serial
+                          604800         ; Refresh
+                            86400         ; Retry
+                          2419200         ; Expire
+                            86400 )       ; Negative Cache TTL
+  ;
+  @       IN      NS      ns1.trisentosa.xyz.
+  @       IN      NS      ns2.trisentosa.xyz.
+  ns1     IN      A       157.245.206.52 ;means ns1.trisentosa.xyz. has this ip address
+  mail    IN      MX 10   mail.trisentosa.xyz.
+  trisentosa.xyz. IN      A       157.245.206.52
+  www     IN      A       157.245.206.52
+  ;external       IN      A       91.189.88.181 ; example for subdomain
+  ```
+  - check syntax
+    - `named-checkconf`
+    - `named-checkzone trisentosa.xyz /etc/bind/db.trisentosa.xyz`
+  - verify, in your VPS: `dig @localhost -t ns trisentosa.xyz`
+  - verify, in your local: `dig -t ns trisentosa.xyz`
+
+### Installing a Web Server(Apache2)
+- To install apache2: `apt update && apt install apache2`
+- By default is started after installed, can check: `systemctl status apache2`
+- Adjust firewall, to filter incoming request. By default in linux has `ufw`(uncomplicated fire wall). to check its status do `ufw status`
+  - if `status: inactive`, can ignore
+  - if `status: active`, can do `ufw allow 'Apache Full'`
+- To check, can go to the ip address or domain, should look something like:
+![apache_default](./static/images/apache_default.png)
+
+### Setting Up Virtual Hosting
+- Virtual Hosting: having multiple websites hosted on a single server
+- By default, apache serves static files from DocumentRoot (`/var/www/html/`), e.g. default ubuntu page is `/var/www/html/index.html`
+- For example, can try 
+  - `echo "Hello, this is my page" > /var/www/html/hello.txt`
+  - then go to `your-domain/hello.txt`
+- But above example is good only for one website. For multiple websites we need DocumentRoot directory for each domain
+  ```
+  mkdir /var/www/trisentosa.xyz
+  ps -ef | grep apache2
+  ```
+
+### Securing Apache with OpenSSL and Digital Certificates
+
+### Installing PHP
+
+### Installing and Securing MySQL Server
+
+### Installing a Web Application (WordPress)
+
+### Securing WordPress
 
 ## Security: Information Gathering and Sniffing Traffic
 
