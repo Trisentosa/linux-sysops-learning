@@ -1555,7 +1555,7 @@ vim /etc/ssh/sshd_config
     - `named-checkconf`
     - `named-checkzone trisentosa.xyz /etc/bind/db.trisentosa.xyz`
   - verify, in your VPS: `dig @localhost -t ns trisentosa.xyz`
-  - verify, in your local: `dig -t ns trisentosa.xyz`
+  - verify, in your local (might take time to be propagated): `dig -t ns trisentosa.xyz`
 
 ### Installing a Web Server(Apache2)
 - To install apache2: `apt update && apt install apache2`
@@ -1572,21 +1572,121 @@ vim /etc/ssh/sshd_config
 - For example, can try 
   - `echo "Hello, this is my page" > /var/www/html/hello.txt`
   - then go to `your-domain/hello.txt`
-- But above example is good only for one website. For multiple websites we need DocumentRoot directory for each domain
-  ```
+- But above example is good only for one domain. For multiple domains we need DocumentRoot directory for each domain. OK, to do this:
+  ```bash
   mkdir /var/www/trisentosa.xyz
-  ps -ef | grep apache2
+  ps -ef | grep apache2 # checks which user runs apache 2 process (default: www-data user and www-data group)
+  chown -R www-data.www-data /var/www/trisentosa.xyz/ # need to do so webserver has full access to directory
+  chmod 755 /var/www/trisentosa.xyz/
+  vim /var/www/trisentosa.xyz/index.html # can put anything in HTML, just to check
+  ```
+- Set the virtual hosting:
+  ```bash
+  vim /etc/apache2/sites-available/trisentosa.xyz.conf
+  ```
+  ```apache
+  <VirtualHost *:80>
+        ServerName trisentosa.xyz
+        ServerAlias www.trisentosa.xyz
+        DocumentRoot /var/www/trisentosa.xyz
+
+
+        ErrorLog /var/log/apache2/trisentosa_xyz_error.log
+        CustomLog /var/log/apache2/trisentosa_xyz_access.log combined
+  </VirtualHost>
+  ```
+  - what this means: if someone accesses `trientosa.xyz` or `www.trisentosa.xyz`, serves them the website from `/var/www/trisentosa.xyz`. Next, to enable it:
+  ```bash
+  a2ensite trisentosa.xyz.conf # it will create symlink inside /sites-enabled directory from /sites-available
+  # Note: a2dissite opposite of a2ensite, will remove symlink from sites-enabled
+  systemctl reload apache2
   ```
 
 ### Securing Apache with OpenSSL and Digital Certificates
+- Goal: securing communication between server and client via HTTPS(HTTP Secure) communication
+![https](./static/images/https.png)
+- This is done through OpenSSL and digital certification, 2 part step
+  - Getting a digital certificate from certification authority, we'll use [letsencrypt](https://letsencrypt.org/)
+  - Configuring our apache webserver to use the certificate to encrypt communication
+- To start
+```bash
+apt update && apt install certbot python3-certbot-apache # install necessary package
+certbot -d trisentosa.xyz # request certificate for a domain (trisentosa.xyz), enter email and agree to the terms of service. Certificate information will be printed in the console
+cat /var/log/letsencrypt/letsencrypt.org # log file for letsencrypt
+```
+- what certbot has done for us:
+  - request certificate
+  - created Virtual host file for apache to use https
+  - load the certificate to apache and reloaded it
+  - can check the modified ssl virtual host configuration file in : `/etc/apache2/sites-available/trisentosa.xyz-le-ssl.conf`
+- That should do it, to check certificate detail, can go to your website:
+![certificate check](./static/images/certificate_check.png)
+- check auto renewal, by default renewal is every 90 days. Certbot tool will take care of renewing the certificate (timer every 2 days). to check:
+```bash
+systemctl status certbot.timer
+certbot renew --dry-run # testing renewal process
+```
 
 ### Installing PHP
+```bash
+apt update && apt install php php-mysql libapache2-mod-php #installing packages
+systemctl restart apache2
+vim /var/www/trisentosa.xyz/test.php
+```
+- test php file
+```php
+<?php
+        phpinfo();
+?>
+```
+- Access your domain/test.php, should look something like this:
+![php_test](./static/images/php_test.png)
 
 ### Installing and Securing MySQL Server
+```bash
+apt update && apt install mysql-server # install package
+systemctl status mysql # check status, should be running after installed
+mysql_secure_installation # setup mysql to be secure (password, remove anonymous user, disallow remote root login,etc). If not sure, choose yes for all
+mysql -u root # enter mysql
+```
 
 ### Installing a Web Application (WordPress)
+- [WordPress](https://wordpress.com/)
+- Create a mysql database then user for wordpress, enter mysql as root first `mysql -u root`
+```sql
+create database wordpress; -- create database to store wordpress data
+create user 'wordpressuser'@'localhost' identified by 'Password$1';
+grant all privileges on wordpress.* TO 'wordpressuser'@'localhost';
+flush privileges;
+exit;
+```
+- Download latest version of wordpress
+```bash
+cd /tmp
+wget https://wordpress.org/latest.tar.gz
+tar -xzvf latest.tar.gz # extract file
+ls wordpress/
+
+rm -rf /var/www/trisentosa.xyz/* # remove existing files first
+mv wordpress/* /var/www/trisentosa.xyz/ # move wordpress files to DomainRoot file
+chown -R www-data.www-data /var/www/trisentosa.xyz/ #change owner ship to www-data (apache user)
+```
+
+- Then should be able to view wordpress page in your domain, next just follow the setup instructions 
+![wordpress_setup](./static/images/wordpress_setup.png)
+  - database info
+  - wordpress installation and user information (remember credential to login and change your wordpress)
 
 ### Securing WordPress
+- Wordpress Security [Tips](https://www.wpbeginner.com/wordpress-security/)
+- Other:
+  1. Always use the latest version of WordPress and keep all plugins up to date.
+  2. Use only strong passwords (min. 10 random characters including special ones).
+  3. Limit login attempts using a plugin or a WAF.
+  4. Install a security plugin or a WAF (Web Application Firewall). Example: `WordFence`.
+  5. Add 2-step verification (using a security plugin).
+  6. Protect wp-admin directory (source IP access or username and passwords).
+  7. Make backups regularly and test them
 
 ## Security: Information Gathering and Sniffing Traffic
 
