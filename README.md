@@ -82,7 +82,16 @@
     - [Installing a Web Application (WordPress)](#installing-a-web-application-wordpress)
     - [Securing WordPress](#securing-wordpress)
   - [Security: Information Gathering and Sniffing Traffic](#security-information-gathering-and-sniffing-traffic)
+    - [Scanning Networks with `Nmap`](#scanning-networks-with-nmap)
+    - [ARP Scanning (`arp-scan` and `netdiscover`)](#arp-scanning-arp-scan-and-netdiscover)
+    - [Hacking Google Searches (Google Dorks)](#hacking-google-searches-google-dorks)
+    - [Using Wireshark for Packet Sniffing and Analyzing](#using-wireshark-for-packet-sniffing-and-analyzing)
+    - [Capture Traffic using `tcpdump`](#capture-traffic-using-tcpdump)
   - [IPFS: Interplanetary File System](#ipfs-interplanetary-file-system)
+    - [What is IPFS and How It Works](#what-is-ipfs-and-how-it-works)
+    - [Installing IPFS on Linux](#installing-ipfs-on-linux)
+    - [Running an IPFS Node on Linux](#running-an-ipfs-node-on-linux)
+    - [Pinning Objects](#pinning-objects)
   - [Netfilter and Iptables Firewall](#netfilter-and-iptables-firewall)
   - [Security: SSH Public Key Authentication](#security-ssh-public-key-authentication)
 - [Challenges](#challenges)
@@ -1679,7 +1688,7 @@ chown -R www-data.www-data /var/www/trisentosa.xyz/ #change owner ship to www-da
 
 ### Securing WordPress
 - Wordpress Security [Tips](https://www.wpbeginner.com/wordpress-security/)
-- Other:
+- More tips:
   1. Always use the latest version of WordPress and keep all plugins up to date.
   2. Use only strong passwords (min. 10 random characters including special ones).
   3. Limit login attempts using a plugin or a WAF.
@@ -1690,7 +1699,157 @@ chown -R www-data.www-data /var/www/trisentosa.xyz/ #change owner ship to www-da
 
 ## Security: Information Gathering and Sniffing Traffic
 
+### Scanning Networks with `Nmap`
+
+- Nmap ("Network Mapper"): https://nmap.org/
+  - Network discovery and security auditing tool
+  - It scans the 1000 most common ports
+  - TCP scans:
+    - SYN Scan: `-sS` (root only)
+      - default and mostly used option
+      - performed quickly, unobstructive (never performed full TCP connection) scannning / half open scanning
+      - send packet -> wait response -> receive SYN and ACK (port is listening) or RESET(port not listening, marked filtered)
+    - Connect Sca
+  - UDP scan: `-sU`
+  - ICMP scan: `-sn` or `-sP`
+  - **example:**
+    ```bash
+    nmap -sS -p 22,100 -sV 192.168.0.1
+    ```
+  - `zenmap`: nmap GUI version
+- Using `Nmap`
+  - Example 1
+    ```bash
+    nmap 142.251.175.139 # tested on google.com
+    ```
+    Output:
+    ```
+    Starting Nmap 7.80 ( https://nmap.org ) at 2023-11-08 09:33 UTC
+    Nmap scan report for sh-in-f139.1e100.net (142.251.175.139)
+    Host is up (0.0022s latency).
+    Not shown: 998 filtered ports
+    PORT    STATE SERVICE
+    80/tcp  open  http
+    443/tcp open  https
+
+    Nmap done: 1 IP address (1 host up) scanned in 4.26 seconds
+    ```
+  - Example 2: using `-sS` (only root), if not root use `-sT`
+    ```bash
+    nmap -sS 142.251.175.139 # tested on my own VPS
+    ```
+    Output:
+    ```
+    Starting Nmap 7.94 ( https://nmap.org ) at 2023-11-08 09:35 UTC
+    Nmap scan report for 157.245.206.52
+    Host is up (0.033s latency).
+    Not shown: 994 closed tcp ports (reset)
+    PORT    STATE    SERVICE
+    22/tcp  open     ssh
+    53/tcp  open     domain
+    80/tcp  open     http
+    139/tcp filtered netbios-ssn
+    443/tcp open     https
+    445/tcp filtered microsoft-ds
+
+    Nmap done: 1 IP address (1 host up) scanned in 2.51 seconds
+    ```
+  - Example 3: what if we want to check port that is not the most common 1000 ports (`e.g. port 50005`)
+    - to test, in your target server (VPS in my case) we can change the ssh port to 50005 (`/etc/ssh/sshd_config`)
+    ```bash
+    .
+    .
+    .
+    Port 50005
+    .
+    .
+    .
+    ```
+    - restart the service
+    ```bash
+    systemctl restart ssh
+    ```
+    - now in other machine can test `nmap` (can try using with and without `-sV`, it checks the versioning of the service running on the port)
+    ```bash
+    nmap -sV 157.245.206.52 -p 20,50005,22 # use -p to specify which port to check
+    ```
+    Output: without `-p`, 50005 not showing
+    ```
+    Starting Nmap 7.94 ( https://nmap.org ) at 2023-12-08 17:19 WIB
+    Nmap scan report for 157.245.206.52
+    Host is up (0.032s latency).
+    Not shown: 995 closed tcp ports (reset)
+    PORT    STATE    SERVICE
+    53/tcp  open     domain
+    80/tcp  open     http
+    139/tcp filtered netbios-ssn
+    443/tcp open     https
+    445/tcp filtered microsoft-ds
+    ```
+    Output: with `-p`
+    ```
+    Starting Nmap 7.94 ( https://nmap.org ) at 2023-12-08 17:21 WIB
+    Nmap scan report for 157.245.206.52
+    Host is up (0.033s latency).
+
+    PORT      STATE  SERVICE  VERSION
+    20/tcp    closed ftp-data
+    22/tcp    closed ssh
+    50005/tcp open   ssh      OpenSSH 8.9p1 Ubuntu 3ubuntu0.4 (Ubuntu Linux; protocol 2.0)
+    Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+    Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+    Nmap done: 1 IP address (1 host up) scanned in 0.77 seconds
+    ```
+  - Example 4: all ports `-p-`
+    - might take some time, press `enter` to check the percentage of ports have been checked
+    ```bash
+    nmap -sV 157.245.206.52 -p- 
+    ```
+
+### ARP Scanning (`arp-scan` and `netdiscover`)
+- `ARP`: https://en.wikipedia.org/wiki/Address_Resolution_Protocol
+- `arp-scan`
+  ```bash
+  sudo su
+  npm install arp-scan
+  arp-scan -I eth0 -l #check on any network interface 
+  ```
+  Output:
+  ```
+  .
+  .
+  .
+  157.245.207.246 fe:00:00:00:01:01       (Unknown: locally administered)
+  157.245.207.247 fe:00:00:00:01:01       (Unknown: locally administered)
+  157.245.207.248 fe:00:00:00:01:01       (Unknown: locally administered)
+  157.245.207.249 fe:00:00:00:01:01       (Unknown: locally administered)
+  157.245.207.250 fe:00:00:00:01:01       (Unknown: locally administered)
+  157.245.207.251 fe:00:00:00:01:01       (Unknown: locally administered)
+  157.245.207.252 fe:00:00:00:01:01       (Unknown: locally administered)
+  157.245.207.253 fe:00:00:00:01:01       (Unknown: locally administered)
+  157.245.207.254 fe:00:00:00:01:01       (Unknown: locally administered)
+  157.245.207.255 fe:00:00:00:01:01       (Unknown: locally administered)
+
+  4095 packets received by filter, 0 packets dropped by kernel
+  Ending arp-scan 1.9.7: 4096 hosts scanned in 9.064 seconds (451.90 hosts/sec). 4095 responded
+  ```
+
+### Hacking Google Searches (Google Dorks)
+
+### Using Wireshark for Packet Sniffing and Analyzing
+
+### Capture Traffic using `tcpdump`
+
 ## IPFS: Interplanetary File System
+
+### What is IPFS and How It Works
+
+### Installing IPFS on Linux
+
+### Running an IPFS Node on Linux
+
+### Pinning Objects
 
 ## Netfilter and Iptables Firewall
 
