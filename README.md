@@ -1704,18 +1704,18 @@ chown -R www-data.www-data /var/www/trisentosa.xyz/ #change owner ship to www-da
 - Nmap ("Network Mapper"): https://nmap.org/
   - Network discovery and security auditing tool
   - It scans the 1000 most common ports
+  - Install:
+    ```bash
+    apt install nmap
+    ```
   - TCP scans:
     - SYN Scan: `-sS` (root only)
       - default and mostly used option
       - performed quickly, unobstructive (never performed full TCP connection) scannning / half open scanning
       - send packet -> wait response -> receive SYN and ACK (port is listening) or RESET(port not listening, marked filtered)
-    - Connect Sca
+    - For non root user: `-sT`
   - UDP scan: `-sU`
   - ICMP scan: `-sn` or `-sP`
-  - **example:**
-    ```bash
-    nmap -sS -p 22,100 -sV 192.168.0.1
-    ```
   - `zenmap`: nmap GUI version
 - Using `Nmap`
   - Example 1
@@ -1808,42 +1808,147 @@ chown -R www-data.www-data /var/www/trisentosa.xyz/ #change owner ship to www-da
     ```
 
 ### ARP Scanning (`arp-scan` and `netdiscover`)
-- `ARP`: https://en.wikipedia.org/wiki/Address_Resolution_Protocol
+- `ARP`: 
+  - Recap: protocol to resolve IP addresses to Mac addresses in order to communicate in LAN
+  - Wiki: https://en.wikipedia.org/wiki/Address_Resolution_Protocol
+  - Video: https://www.youtube.com/watch?v=cn8Zxh9bPio
 - `arp-scan`
   ```bash
   sudo su
-  npm install arp-scan
-  arp-scan -I eth0 -l #check on any network interface 
+  apt install arp-scan
+  arp-scan --help
+  arp-scan -I enp0s3 -l #check on any local(-l) network interface with interval (-I)
   ```
   Output:
   ```
-  .
-  .
-  .
-  157.245.207.246 fe:00:00:00:01:01       (Unknown: locally administered)
-  157.245.207.247 fe:00:00:00:01:01       (Unknown: locally administered)
-  157.245.207.248 fe:00:00:00:01:01       (Unknown: locally administered)
-  157.245.207.249 fe:00:00:00:01:01       (Unknown: locally administered)
-  157.245.207.250 fe:00:00:00:01:01       (Unknown: locally administered)
-  157.245.207.251 fe:00:00:00:01:01       (Unknown: locally administered)
-  157.245.207.252 fe:00:00:00:01:01       (Unknown: locally administered)
-  157.245.207.253 fe:00:00:00:01:01       (Unknown: locally administered)
-  157.245.207.254 fe:00:00:00:01:01       (Unknown: locally administered)
-  157.245.207.255 fe:00:00:00:01:01       (Unknown: locally administered)
+  Interface: enp0s3, type: EN10MB, MAC: 08:00:27:4f:78:f4, IPv4: 10.0.2.15
+  Starting arp-scan 1.9.7 with 256 hosts (https://github.com/royhills/arp-scan)
+  10.0.2.2        52:54:00:12:35:02       QEMU
+  10.0.2.3        52:54:00:12:35:03       QEMU
+  10.0.2.4        52:54:00:12:35:04       QEMU
 
-  4095 packets received by filter, 0 packets dropped by kernel
-  Ending arp-scan 1.9.7: 4096 hosts scanned in 9.064 seconds (451.90 hosts/sec). 4095 responded
+  4 packets received by filter, 0 packets dropped by kernel
+  Ending arp-scan 1.9.7: 256 hosts scanned in 2.219 seconds (115.37 hosts/sec). 3 responded
   ```
+- `netdiscover`
+  - using `netdiscover`
+    ```bash
+    apt update && apt install netdiscover
+    netdiscover # active arp scanning
+    netdiscover -i enps03 # -i: on specified network interface
+    netdiscover -i enps03 -r 192.168.0.0/24 # -r: give subnet range, instead of autoscan entire network 
+    netdiscover -i enps03 -r 192.168.0.0/24 -p # -p: passive mode, not sending anything, just monitor arp request in the network
+    ```
 
 ### Hacking Google Searches (Google Dorks)
+- Google Hacking/ Google dorking: computer hacking technique that uses google search and other google applications to find security holes in configuration and code that websites used
+- Google Search Basics
+  - Let pick a topic to search: `web scraping with python`
+  - By default, google will predict result that most match the search string
+  - To match with the string specifically, use quote (`""`). `"web scraping with python"`
+  - To find within time range and other options (such as language), use the `Tool` below the search bar
+  - To find filetype can use `filetype`: `"web scraping with python" filetype:pdf`
+  - Exclude a certain keyword using `-`: `"web scraping with python" -BeautifulSoup filetype:pdf` 
+  - To find from specific site use `site:` and title using `intitle:`: `site:wikipedia.org intitle:security`
+  - OR: `bitcoin | ethereum`
+  - Parentheses: `(bitcoin|ethereum) hash algorithm` , this means search for bitcoin hash algorithm or ethereum hash algorithm
+  - `google.com/advanced` 
 
 ### Using Wireshark for Packet Sniffing and Analyzing
+- Official website: https://www.wireshark.org/
+- To install in debian based distribution: `apt install wireshark`
+- In mac/windows, download directly from official website
+- Choose the network interface you want to track
+  - ![wireshark_capture](./static/images/wireshark_capture.png)
+- Color will represent type of request, can be customised via `View->Coloring Rules`
+  - ![wireshark_coloring](./static/images/wireshark_coloring_rule.png)
+- Main windows consist of 3 main panes
+  - Packet List pane: list of all the packets of the network interface
+  - Packet detail pane: detail of each packet in the packet list pane
+  - Packet byte pane: show the bytes of selected packet,will highlight the field of selected packet 
+  - ![wireshark_panel](./static/images/wireshark_panels.png)
+- Save packet data (`ctrl+s`): default format is `.pcapng` , `.pcap`(older version, also used by other tool by `tcpdump`). for example:
+  ```bash
+  tcpdump -vv -r capture.pcap
+  ```
 
 ### Capture Traffic using `tcpdump`
+- tcpdump is installed by default in any debian system
+- using `tcpdump`
+  ```bash
+  tcpdump -i enp0s3 # listen to a network interface
+  tcpdump -i enp0s3 | grep ICMP # to easily see my ping traffic from other terminal, later there is easier/official-er way
+  tcpdump -i enp0s3 host 8.8.8.8 # only capture traffic from/to this host address, try ping 8.8.8.8
+  tcpdump -i enp0s3 dst medium.com # use src or dst if you only want one way directional traffic capture
+  tcpdump -i enp0s3 dst medium.com -n # -n used to convert domain name to IP address
+  tcpdump -i enp0s3 net 10.0.2.15/24 # going from or to a particular subnet
+  tcpdump -i enp0s3 port 443 -vv -n # capture from certain port, for example 443 for HTTPS traffic. -vv for better verbose
+  tcpdump -i eth0 dst port 53 -vv -n # DNS query (53) 
+  tcpdump -i enp0s3 port 80 -A -n # print data and header in ASCII format
+  tcpdump -i enp0s3 port 80 -x -n # print data and header in hexadecimal format
+  tcpdump -i enp0s3 icmp and host 8.8.8.8 # capture only ICMP traffic to 8.8.8.8
+  tcpdump -i enp0s3 port 80 or port 443 # get traffic from port 80 or port 443
+  ```
+- example output of  `tcpdump -i enp0s3 dst medium.com` using `ping medium.com`
+  ```bash
+  tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+  listening on enp0s3, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+  21:47:35.337456 IP trisentosa-virtualbox > 162.159.152.4: ICMP echo request, id 5, seq 1, length 64
+  21:47:36.338768 IP trisentosa-virtualbox > 162.159.152.4: ICMP echo request, id 5, seq 2, length 64
+  21:47:37.340933 IP trisentosa-virtualbox > 162.159.152.4: ICMP echo request, id 5, seq 3, length 64
+  21:47:42.474498 IP trisentosa-virtualbox > 162.159.152.4: ICMP echo request, id 5, seq 4, length 64
+  21:47:43.475583 IP trisentosa-virtualbox > 162.159.152.4: ICMP echo request, id 5, seq 5, length 64
+  ```
+- example output of ` tcpdump -i enp0s3 dst medium.com -n` using `ping medium.com`
+  ```bash
+  tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+  listening on enp0s3, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+  21:47:54.080396 IP 10.0.2.15 > 162.159.153.4: ICMP echo request, id 6, seq 1, length 64
+  21:47:55.082433 IP 10.0.2.15 > 162.159.153.4: ICMP echo request, id 6, seq 2, length 64
+  21:47:56.086787 IP 10.0.2.15 > 162.159.153.4: ICMP echo request, id 6, seq 3, length 64
+  ```
+- example output of `tcpdump -i enp0s3 port 443 -vv -n` using `telnet medium.com 443`
+  ```bash
+    tcpdump: listening on enp0s3, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+  21:56:57.883499 IP (tos 0x10, ttl 64, id 12750, offset 0, flags [DF], proto TCP (6), length 60)
+      10.0.2.15.34254 > 162.159.153.4.443: Flags [S], cksum 0x47e1 (incorrect -> 0x873e), seq 503088375, win 64240, options [mss 1460,sackOK,TS val 1715989849 ecr 0,nop,wscale 7], length 0
+  21:56:57.902692 IP (tos 0x0, ttl 64, id 15622, offset 0, flags [none], proto TCP (6), length 44)
+      162.159.153.4.443 > 10.0.2.15.34254: Flags [S.], cksum 0x627b (correct), seq 929664001, ack 503088376, win 65535, options [mss 1460], length 0
+  21:56:57.902833 IP (tos 0x10, ttl 64, id 12751, offset 0, flags [DF], proto TCP (6), length 40)
+      10.0.2.15.34254 > 162.159.153.4.443: Flags [.], cksum 0x47cd (incorrect -> 0x7f47), seq 1, ack 1, win 64240, length 0
+  21:56:57.979542 IP (tos 0x0, ttl 64, id 63405, offset 0, flags [DF], proto TCP (6), length 60)
+      10.0.2.15.48872 > 162.213.33.48.443: Flags [S], cksum 0xd042 (incorrect -> 0x86e8), seq 2894214761, win 64240, options [mss 1460,sackOK,TS val 4260189333 ecr 0,nop,wscale 7], length 0
+  ```
+- save and read from `pcap` file
+  ```bash
+  tcpdump -i enp0s3 port 443 -vv -n -w test.pcap # save to test.pcap
+  tcpdump -r test.pcap # read from pcap file, all options like -x, -vv, -n still available
+  ```
 
 ## IPFS: Interplanetary File System
 
 ### What is IPFS and How It Works
+- IPFS(Interplanetary File System): is a protocol designed to creeate a permanent and decentralized method of storing and sharing files
+- IPFS aims to replace HTTP and build a better web
+- **IPFS properties**
+  - peer-to-peer(no central server or single point of failure), decentralized, and distributed file system
+  - is a CDN(Content Delivery Network). Once someone add a file to the IPFS locally, immediately accessible globally
+  - fault-tolerant with zero downtime (Once a file is added to IPFS node and requested by IPFS client, the file get cached by other nodes as well)
+  - cencorship resistant (once a file is added and cached, cannot be deleted anymore)
+  - uses **content address** (not location addressing like HTTP)
+- Content Addressing vs Location Addressing
+  - Location Addressing
+    - Contents is accessed by location (`https:www.xxx.com/yyy.pdf`)
+    - Whoever controls that location controls the content
+  - Content Addressing
+    - Files aren't anymore accessed based on "where they are", but based on "what they are"
+    - Refers everything by hash (the content itself)
+    - There is no location of the files, no one controls the files
+  - **Pinning**
+    - Mechanism that allows you to tell IPFS to always keep a given object and never remove it
+- References
+  - https://docs.ipfs.tech/concepts/how-ipfs-works/#content-addressing
+  - https://www.youtube.com/watch?v=Z5zNPwMDYGg 
 
 ### Installing IPFS on Linux
 
