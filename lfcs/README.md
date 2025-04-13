@@ -17,6 +17,8 @@
   - [Create and Manage Hard Links](#create-and-manage-hard-links)
   - [Create and Manage Soft Links](#create-and-manage-soft-links)
   - [Lab: Files, Directories, Hard and Soft Links](#lab-files-directories-hard-and-soft-links)
+  - [List, Set, and Change Standard File Permissions](#list-set-and-change-standard-file-permissions)
+  - [SUID, SGID, and Sticky Bit](#suid-sgid-and-sticky-bit)
 
 # Introduction
 ## Course Link
@@ -216,3 +218,98 @@ Terminologies
 
 ## Lab: Files, Directories, Hard and Soft Links
 [Lab: Files, Directories, Hard and Soft Links](./labs/files_directories_hard_soft_links.bash)
+
+## List, Set, and Change Standard File Permissions
+- First, We need to understand `Owner and Groups`
+  - When we do `ls -l`, we can see this output
+    - ![owner_group](./resources/screenshots/owner_group.png)
+  - The one highlighted in blue is "owner" and the one highlighted in yellow is "group"
+  - Groups:
+    - `chgrp <new_group> <target_file/target_directory>`: change the target_file/target_directory group to new_group
+    - `groups`: list groups
+  - Owner:
+    - `sudo chown <new_owner> <target_file/target_directory>`: change the target_file/target_directory group to new_owner
+      - Note: only root user able to change the owner of a file
+- Second, We need to understand File and Directory permissions
+  - When we do `ls -l`, the first section is the permissions section
+    - For example "lrwxrwxrwx"
+    - What does each character stands for ?
+      - the first character stands for the file type
+        - ![ls_file_types](./resources/screenshots/ls_file_types.png)
+      - next 9 characters shows us file permissions
+        - ![ls_permissions](./resources/screenshots/ls_permissions.png)
+    - What does r, w, x exactly mean ?
+      - They behave differently between files and directories
+      - File:
+        - r: can read contents of file. "-" means cannot read
+        - w: can write contents to the file
+        - x: can execute this file (e.g. execute a bash script)
+      - Directory:
+        - r: can read the contents of directory 
+        - w: can write to the directory
+        - x: execute into directory
+    - How Permission is evaluated
+      - ![permission_evaluation](./resources/screenshots/permission_evaluation.png)
+      - permission evaluated left to right
+      - In above example, may be bit unintuitive, but a good example of evaluating permission. Even though aaron is part of family, OS will evaluate the owner permissions first. And since aaron does not have write permission as the owner, he cannot write to the file
+      - Meanwhile Jane, is also part of family. But since she is not the owner, OS evaluates her group permission. And she does indeed have permission to write to the file
+  - How to change permission
+    - `chmod <permissions> <target_file/target_directory>`: change permissions(mode) of file/directory
+      - Multiple ways to use this command
+        1. Add permission to specific area (user/group/others)
+          - ![chmod_shortcuts](./resources/screenshots/chmod_shortcut.png)  
+          - e.g. `chmod u+w dog.txt`: gives owner write permission to dog.txt 
+          - To remove permission, can use `-` instead of `+`
+          - e.g. `chmod u-rw dog.txt`: removes owner write and read permission to dog.txt
+          - To set **Exact** permission, can use `=` instead
+          - e.g. `chmod o= dog.txt`: others cannot read, write, and execute permission to dog.txt (same as `o=---`)  
+          - e.g. `chmod u=r dog.txt`: by default, non-included permission will be removed. So in this case permission for user is `r--`
+          - For targetting multiple areas, can separate by comma
+          - e.g. `chmod u=rwx,g=rw,o+r dog.txt`
+        2. Add permission using octal value
+           - If we run `stat` command, we can see the octal value permission of a file
+             - ![stat_octal_permissio](./resources/screenshots/stat_octal_permission.png)
+             - as you can see, `0644` is the octal permission
+               - we can ignore the first 0 (related to SUID,SGID,and Sticky Bit in next section)
+               - 6 is owner permission
+               - 4 is group permission
+               - 4 is others permission
+             - We can calculate this by using binary calculation. e.g.
+               - `rwx`: 111 binary = 4+2+1 = 7
+               - `--x`: 001 binary = 0+0+1 = 1
+             - We can think of it as octal value, where
+               - r = 4, w = 2, x = 1
+               - then we just add/subtract as needed
+           - then we can just use chmod like this:
+             - `chmod 640 dog.txt`: set 6(owner), 4(group), and 0(others)
+
+## SUID, SGID, and Sticky Bit
+- `SUID`: special permission that allows user to run an executable, with the permission of the executable's owner
+  - Example Usecase: If we have a program that write reports to a restricted directory. But we don't want other users to access that restricted directory. We can set the SUID so that the OS will assume owner's permission for this executable
+- `SGID`: same with SUID, but also applies to directories as well. It assumes the permission of the executable's/directories's GROUP, not OWNER
+  - Example Usecase: A program that is executed by member of "X" group, then that executable will have the permission of "X" group. 
+- `Sticky Bit`: special permission that can be set on directories. It restricts file deletion in that directory
+  - Only file owner, directory owner, or sudo user can delete the file
+  - Example Usecase: Shared directory with multiples user creating file, but don't want X user to modify files created by Y user
+- Modify SUID, SGID, and Sticky Bit
+  - We can add 1 more digit in front when doing `chmod` to include this SUID/SGID/Sticky bit configuration
+  - SUID/SGID/StickyBit as Octal values:
+    - SUID: 4
+    - SGID: 2
+    - Sticky Bit: 1
+  - So we can do: 
+    - `chmod 4666 file.txt`: gives SUID to file.txt
+      - `ls -l`: will shows either `S` or `s` in place of the usual `x` OWNER permission
+      - `S` means SUID is enabled, but owner doesn't have executable permission
+      - `s` means SUID is enabled, and owner have executable permisson
+    - `chmod 2666 file.txt`: gives SGID to file.txt
+      - `ls -l`: will shows either `S` or `s` in place of the usual `x` GROUP permission
+      - `S` means SUID is enabled, but group doesn't have executable permission
+      - `s` means SUID is enabled, and group have executable permisson
+    - `chmod 1666 files` or `chmod +t files`: gives Sticky Bit to files directory 
+      - `ls -l`: will shows either `T` or `t` in place of the usual `x` GROUP permission
+      - `T` means Sticky Bit is enabled, but others doesn't have executable permission
+      - `t` means Sticky Bit  is enabled, and others have executable permisson
+    - Of course we can combine SUID/SGID/Sticky Bit to a file/directory
+      - `chmod 6777 file.txt`: grants SUID and SGID to file.txt
+
