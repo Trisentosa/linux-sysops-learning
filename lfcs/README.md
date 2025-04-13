@@ -19,6 +19,8 @@
   - [Lab: Files, Directories, Hard and Soft Links](#lab-files-directories-hard-and-soft-links)
   - [List, Set, and Change Standard File Permissions](#list-set-and-change-standard-file-permissions)
   - [SUID, SGID, and Sticky Bit](#suid-sgid-and-sticky-bit)
+  - [Search for Files](#search-for-files)
+  - [Lab: File Permissions, Search for Files](#lab-file-permissions-search-for-files)
 
 # Introduction
 ## Course Link
@@ -313,3 +315,56 @@ Terminologies
     - Of course we can combine SUID/SGID/Sticky Bit to a file/directory
       - `chmod 6777 file.txt`: grants SUID and SGID to file.txt
 
+## Search for Files
+- `find`: flexible command to find files in the filesystem
+  - Example
+  ```bash
+    find /usr/share -name '*.jpg' # find all jpg files under /usr/share
+    find /lib/ -size +10M # find files under /lib where size larger than 10M
+    find /dev/ -mmin -1 # files changed in the past minute under /dev/
+  ```
+  - Usage
+    - General: `find <dir> <parameters/options>`
+    - If directory empty, it will search current directory
+    - Useful parameters:
+      - `-name`: find based on file name
+        - commonly can be combined with wildcard "*" 
+      - `-iname`: find based on file name, case insensitive
+      - `-mmin`: stands for "modified minute"
+        - can use `+`, `-`, and none when searching for time. Let say time is 12:05
+        ```bash
+        find -mmin 5 # exactly at 12:00
+        find -mmin -5 # file modified in the past 5 min 12:01 - 12:05
+        find -mmin +5 # file modified more than 5 min ago
+        ```
+        - ![mmin](./resources/screenshots/mmin.png)
+      - `-mtime`: same `mmin` but in the range 24 hour unit instead of minute unit
+      - NOTES: "Modified" vs "Changed"
+        - Modified: file when content edited or file created
+        - Changed: file metadata changed (e.g. permission)
+      - `-ctime`: stands for "changed time" (metadata)
+      - `-size`
+        - size unit table
+        ![find_size](./resources/screenshots/find_size.png)
+        - can use `+`(greater than), `-` (less than), and none (exactly)
+      - `-perm`: find based on files permissoin
+        - Example
+        ```bash
+        find -perm 664 # find files with 664 permission
+        find -perm -664 # find files with at least 664 permission
+        find -perm /664 # find files with any of these permission (either u=6, g=6, or o=4)
+        find -perm u=rw,g=rw,o=r # same as -perm 664
+        ```  
+      - `-type`: find by type
+        - e.g. `find -type d` # find in current direcytroy where type is directory
+
+    - Combine parameters
+      ```bash
+      find -name "*.log" -size +100M # appending -> AND operator
+      find -name "*.log" -o -size +100M # -o <param> -> OR operator
+      find -not -name "*.log" # -not <param> -> NOT operator
+      find \! -name "*.log" # same as -not, just another notation
+      ```
+## Lab: File Permissions, Search for Files
+- [Lab: File Permissions, Search for Files](./labs/file_permission_and_search_files.bash)
+      
