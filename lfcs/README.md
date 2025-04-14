@@ -21,6 +21,7 @@
   - [SUID, SGID, and Sticky Bit](#suid-sgid-and-sticky-bit)
   - [Search for Files](#search-for-files)
   - [Lab: File Permissions, Search for Files](#lab-file-permissions-search-for-files)
+  - [Compare and Manipulate File Content](#compare-and-manipulate-file-content)
 
 # Introduction
 ## Course Link
@@ -367,4 +368,83 @@ Terminologies
       ```
 ## Lab: File Permissions, Search for Files
 - [Lab: File Permissions, Search for Files](./labs/file_permission_and_search_files.bash)
+
+## Compare and Manipulate File Content
+- View Text Files
+  - `cat` (display text) or `tac` (display text file bottom up)
+    - `cat` format: `cat file.txt`
+    - `tac` format: `tac file.txt`
+  - `head`: display the first 10 lines
+    - Options:
+      - `n`: shows the first n lines instead of default 10
+  - `tail`: display the last 10 lines
+    - Options:
+      - `n`: shows the last n lines
+- Transforming Text
+  - `sed`: "stream editor". transforms stream of matching text to desired 
+    - Usage: `sed <instruction> filename`
+    - Example
+    ```bash
+    sed 's/canda/canada/g' userinfo.txt # replace all occurence canda with canada in userinfo.txt
+    $ # sed must wrap instruction with single quote
+    $ # the first character s stands for substitute (for search and replace)
+    $ # the last character g stands for global (all occurences). Default is only 1 line
+    $ # can read it as "search and replace canda with canda for all occurences"
+    
+    sed 's/canda/canada/' userinfo.txt # without g will just replace one occurence
+
+    sed -i 's/canda/canada/g' userinfo.txt # By default sed will not change the file, it will only show the preview of changes
+    $ # use -i or --in-place to apply the change directly in the file
+    ```
+  - `cut`: extract parts we need from a file
+    - For example if we have a space separated file like this:
+      ```
+      1 a b c
+      2 d e f
+      3 g h i
+      ```
+    - and we want to only get the first column
+    ```bash
+    cut -d ' ' -f 1 userinfo.txt # get the first column
+    $ # -d: delimiter, here we just put space character
+    $ # -f: field, here we just want the field 1 (first column)
+    ```
+  - `uniq`: get unique entries from a file
+    - Usage: `uniq filename`
+    - How it works
+      - If we have filename file.txt
+      ```bash
+      a
+      b
+      b
+      c
+      b
+      ``` 
+      - `uniq file.txt` output will be
+      ```bash
+      a
+      b
+      c
+      b
+      ``` 
+      - the reason because `uniq` only removes the entry next to each other, not all occurence
+  - `sort`: sort entry in files numerically
+    - Usage: `sort filename`
+    - Can be used in conjunction with `uniq` to remove all duplicates
+    - In example above, we can do: `sort file.txt | uniq`. Output will be:
+    ```bash
+    a
+    b
+    c
+    ``` 
+- `diff`: compared 2 different files 
+  - Usage: `diff file1 file2`
+  - Common Option:
+    - `-c`: context. gives context of what changed by symbols at front
+      - `!`: different line
+      - `+`: added line
+      - `-`: removed line
+    - `-y`: side by side comparison
+  - ![diff_cmd](./resources/screenshots/diff_command.png)
+  - ![sdiff_cmd](./resources/screenshots/sdiff_command.png)
       
