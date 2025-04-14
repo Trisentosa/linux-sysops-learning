@@ -22,6 +22,7 @@
   - [Search for Files](#search-for-files)
   - [Lab: File Permissions, Search for Files](#lab-file-permissions-search-for-files)
   - [Compare and Manipulate File Content](#compare-and-manipulate-file-content)
+- [Pagers and Vi Demo](#pagers-and-vi-demo)
 
 # Introduction
 ## Course Link
@@ -447,4 +448,38 @@ Terminologies
     - `-y`: side by side comparison
   - ![diff_cmd](./resources/screenshots/diff_command.png)
   - ![sdiff_cmd](./resources/screenshots/sdiff_command.png)
+
+# Pagers and Vi Demo
+- Brief overviews of pagers and Vi
+- Pagers: display file in page format
+  - `less`
+    - Navigation
+      -  up/down arrow keys: navigate line by line
+      - `/text`: search string matching with text
+        - `n`: move downward through result
+        - `N`: move upward
+      - `-i` + enter: can be used after `/text` to make your search case insensitive
+      - `q`: quit pager
+  - `more`
+    - `space`: move page by page
+    - `q`: quite
+- Vim: text editor (Vi-Improved)
+  - Basic Usage
+    - press escape to enter command mode
+    - `i` command: to insert text
+    - `:q` command: exit vi/vim
+    - `:wq` command: exit and save (w-> write)
+    - `q!` command: force quite without saving any change
+    - `h,j,k,l`
+      - `h`: left
+      - `l`: right
+      - `j`: down
+      - `k`: up
+    - `/text`: search for text (case sensitive)
+      - `/text\c`: search for text (case insensitive), need to add `\c` in the end
+    - `:<any-number>`: go to any line 
+    - `y`: yank a line (copy)
+    - `d`: cut a line 
+    - `p`: paste a line you copy or cut
+    - 
       
