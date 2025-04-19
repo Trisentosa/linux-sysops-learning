@@ -27,6 +27,11 @@
   - [Analyze Text Using Basic Regular Expressions](#analyze-text-using-basic-regular-expressions)
   - [Extended Regular Expressions](#extended-regular-expressions)
   - [Lab: File Content, Regular Expressions](#lab-file-content-regular-expressions)
+  - [Archive, Back Up, Compress, Unpack, and Uncompress Files](#archive-back-up-compress-unpack-and-uncompress-files)
+  - [Compress and Uncompress Files (Optional)](#compress-and-uncompress-files-optional)
+  - [Back Up Files to a Remote System](#back-up-files-to-a-remote-system)
+  - [Input-Output Redirection](#input-output-redirection)
+- [Lab: Archive, Back Up, Compress, IO Redirection](#lab-archive-back-up-compress-io-redirection)
 
 # Introduction
 ## Course Link
@@ -610,3 +615,187 @@ Terminologies
 
 ## Lab: File Content, Regular Expressions
 - [Lab: File Content, Regular Expressions](./labs/file_content_regular_expressions.bash)
+
+## Archive, Back Up, Compress, Unpack, and Uncompress Files
+- How a backup process works (typically)
+  - Usually it comprise of 3 steps (Archiving , Compress, Backup)
+  - ![backup_steps](./resources/screenshots/backup_steps.png)
+  - Archive:
+    - "Packing" --> packs files and directories of your project to a single file (usually `.tar` file extension)
+    - what is tar?
+      - tar (tape archiver): "packer" and "unpacker"
+      - takes any number of files and directories and pack it into a single tar file (or also called a "tarball")
+      - it is also a command we can use to interact or operate things related with tar file
+    - Packing files with `tar`
+      - List contents of tar file
+      ```bash
+      tar --list --file archive.tar
+      tar -tf archive.tar # -tf same as --list --file
+      tar tf archive.tar # shorthand for -tf, please use the f option at the end since we usually put the tar file next after the command line options
+      ```  
+      - Archiving files/directories to a tar file
+      ```bash
+      tar --create --file archive.tar file1 # create archive.tar from file1
+      $ # above can also achieved by `tar cf archive.tar file1`
+
+      tar --append --file archive.tar file2 # append file2 to archive.tar file
+      $ # above can also achieved by `tar rf archive.tar file2`
+
+      tar --create --file archive.tar Pictures/ # add an entire directory to a tar file
+      ``` 
+      - Extracting from a tar file
+      ```bash
+      tar --list --file archive.tar # first we can list the content to preview
+
+      tar --extract --file archive.tar # extract contents of file to current directory
+      $ # above can also achieved by `tar xf archive.tar`
+
+      tar --extract --file archive.tar --directory /tmp/ # extract to a specific directory instead of current one
+      $ # above can also achieved by `tar xf archive.tar -C /tmp/`
+      ``` 
+## Compress and Uncompress Files (Optional)
+- purpose: to reduce files size
+  - requires less storage space
+  - transferring files will be much faster as well
+- most linux system have 3 compression utilities comes pre-installed
+  - `gzip`
+  - `bzip2`
+  - `xz`
+  - To compress
+  ```bash
+  gzip file1 # output: file1.gz
+  bzip2 file2 # output: file2.bz2
+  xz file3 # output: file3.xz
+
+  $ # all three command above will compress a file to their respective file type, and delete the original file
+  $ # to keep original file use --keep, or -k
+  ``` 
+  - To De-compress
+  ```bash
+  gzip --decompress file1.gz # shorthand: gunzip file1.gz
+  bzip2 --decompress file2.bz2 # shorthand: bunzip file2.bz
+  xz --decompress file3.xz # shorthand: unxz file3.sz
+
+  $ # original file is restored and compressed file is removed
+  $ # to keep compressed file use --keep, or -k
+  ```
+  - Note: it can compress data with a single file inside
+- `zip`: packing and compression utility
+  - Example:
+  ```bash
+  zip archive file1 # same as "zip archive.zip file1"
+  zip -r archive.zip Pictures/ # -r: recursive. For directory
+  unzip archive.zip
+  ``` 
+- compression using `tar`
+  - previously we saw that tar is for archiving only
+  - but we can pass in option in `tar` actually, to compress after archiving
+  ```bash
+  tar --create --gzip --file archive.tar.gz file1 # same as `tar czf archive.tar.gz file1`
+  tar --create --bzip2 --file archive.tar.bz2 file2 # same as `tar cjf archive.tar.bz2 file1`
+  tar --create --xz --file archive.tar.xz file3 # same as `tar cJf archive.tar.xz file1`
+  
+  tar --create --autocompress --file archive.tar.xz file3 # auto choose compression based on name
+
+  tar caf archive.xz file1
+  tar --extract --file archive.tar.gz # for de-compression no need to provide the compression method
+  tar xf archive.tar.gz file1
+  ```  
+
+## Back Up Files to a Remote System
+- Basic backup: copying files from one system to another system (for understanding, we will use native linux tools to do so)
+- `rsync`: "remote synchronization". syncing two directories
+  - [rsync guide](https://linuxize.com/post/how-to-use-rsync-for-local-and-remote-data-transfer-and-synchronization/)
+  - requirement: the destination server must have ssh daemon running on it
+  - syntax: `rsync <location_of_file_or_dir_to_copy> <user@ip_address>:<destination_location_in_remote_server>`
+  - rsync will only copy files that not exist yet or has been changed in the target directory. Same files that previously added and unmodified will be skipped from being added again
+  - common options:
+    - `-a`: archive, meaning we also copy the metadata, subdirectories, etc as well. from `man rsync`:
+    ```bash
+    This is equivalent to -rlptgoD.  It is a quick way of saying you want recursion and want to preserve almost everything.  Be aware that it does not include preserv‐
+    ing ACLs (-A), xattrs (-X), atimes (-U), crtimes (-N), nor the finding and preserving of hardlinks (-H).
+
+    The only exception to the above equivalence is when --files-from is specified, in which case -r is not implied.
+    ``` 
+  - Usage:
+  ```bash
+  rsync -a Pictures/ lfcs@192.168.1.69:/home/lfcs/Pictures/ # local -> remote
+  rsync -a lfcs@192.168.1.69:/home/lfcs/Pictures/ Pictures/  # remote -> local
+  rsync -a Pictures/ /Backups/Pictures # local -> local (another location)
+  ``` 
+- `dd`: disk imaging. copying entire disk or partition
+  - [dd guide](https://blog.kubesimplify.com/the-complete-guide-to-the-dd-command-in-linux)
+  - this will copy the exact "picture" of the parition, also called `imaging` (bit by bit copy)
+  - Example:
+    ```bash
+    sudo dd if=/dev/vda of=diskimage.raw bs=1M status=progress
+    $ # if = input file (disk/partition you want to copy)
+    $ # of = output file (path you want the disk/partition to be copied to)
+    $ # bs = block size (1 Megabyte or larger). Default is much smaller, making the copying process to be inefficient
+    $ # status = progress (ask dd to shows the progress its making)
+    ```
+  - Note: don't run this command on virtual machine (will overwrite virtual disk)
+
+## Input-Output Redirection
+- Redirect the default output (usually in the terminal window)
+- Redirect Output
+  - `>` operation
+    - redirect output (stdout) to a file
+    - Note: this operation will overwrite the current file
+    ```bash
+    date > file.txt # output of date redirected to file.txt 
+    date > file.txt # file.txt will be overwritten with new output of dat
+    ``` 
+  - `>>`: append output to the file instead of overwriting like `>`
+  - `1>` and `2>`
+    - A command output usually can be of 2 types:
+      - success output or standard output (stdout). Symbolized by `&1`
+      - Error output or standard error (stderr). Symbolized by `&2`
+    - Example:
+    ```bash
+    grep -i "ping" file.txt 1> success_output 2> err_output # if operation success will write to success_output
+    grep -asfasjxze "ping" file.txt 1> success_output 2> err_output # if operation failed will write to err_output
+
+    grep -r '^The' /etc/ 2> /dev/null # this will only output to terminal the success output (for exapmle, permission denied error will not be printed, and clutter our screen)
+    $ # /dev/null -> "linux blackhole" 
+
+    grep -r '^The' /etc/ 1> all_output.txt 2>&1 
+    $ # 2>&1 say that redirect stderr (2>) to stdout(&1)
+    ```
+  - `1>>` and `2>>`: similar to `1>` and `2>` but append instead of overwrite
+- Redirect Input
+  - `<`: redirect input from file to program
+    - Example usecase:
+    ```bash
+    $ # bc is a built-in calculator program in linux
+    vim bc_input
+    bc < bc_input # use bc_input file as input to bc
+    $ # so in the example, output will be
+    $ # 4
+    $ # 42
+    ```
+    - `bc_input`
+    ```bash
+    1+3
+    6*7
+    ``` 
+  - `<<`: Here Document (heredoc). basically we create the input on-the-go
+    - Example
+    ```bash
+    sort <<EOF # this will initialize an interface for you to create the input on-the-go. It will end the input when you type EOF (this is common convention, but by right you can use other symbol other than EOF)
+    ``` 
+  - `<<<`: Here String
+    - Example
+    ```bash
+    bc <<< 1+2+4+7
+    ``` 
+- Piping
+  - `|`: called "tee" operator. will use output from one program as input to another program
+  - Example:
+  ```bash
+  grep -v '^#' /etc/login.defs | sort # output of grep -> input of sort
+  grep -v '^#' /etc/login.defs | sort | column -t # output of grep -> input of sort -> make a nice tabular view out of it
+  ``` 
+
+# Lab: Archive, Back Up, Compress, IO Redirection
+![Lab: Archive, Back Up, Compress, IO Redirection](./labs/archive_back_up_compress_io_redirection.bash)
