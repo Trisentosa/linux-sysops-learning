@@ -25,6 +25,8 @@
   - [Pagers and Vi Demo](#pagers-and-vi-demo)
   - [Search Files with Grep](#search-files-with-grep)
   - [Analyze Text Using Basic Regular Expressions](#analyze-text-using-basic-regular-expressions)
+  - [Extended Regular Expressions](#extended-regular-expressions)
+  - [Lab: File Content, Regular Expressions](#lab-file-content-regular-expressions)
 
 # Introduction
 ## Course Link
@@ -515,14 +517,96 @@ Terminologies
   - `$`: "The line ends with"
     - Example Usecase:
     ```bash
-    grep -w '7$' /etc/login.defs # match only a single 
+    grep -w '7$' /etc/login.defs # match only lines with an exact single letter 7 at the end
+    $ # for example xxx 007 will not match
+    $ # but xxx 0 0 7 will match
+    grep 'mail$' /etc/login.defs # ends with mail, not need to be exact ('.mail' 'gmail' still works) 
     ```
-  - `.`
-  - `*`
-  - `+`
-  - `{}`
-  - `?`
-  - `|`
-  - `[]`
-  - `()`
-  - `[^]`
+  - `.`: "Match any ONE character"
+    - Example Usecase:
+    ```bash
+    grep -r 'c.t' /etc/ # search for any character with c<any>t in /etc/ directory
+    $ # for example, words like "execute", "cat", "cut", "location" will match
+    ``` 
+    - How to search for an actual period (`.`) in our text ?
+      -  use escape character (`\`)
+      -  e.g. `grep -r '\.' /etc/`
+  - `*`: "Match the previous element 0 or more times"
+    - Example UsecaseL
+    ```bash
+    grep -r 'let*' /etc/
+    $ # this will match workds like "let", "file", "letter", "left" 
+    
+    grep -r '/.*/' /etc/ # find lines that have a string that begins with / and ends with /
+    ``` 
+  - `+`: Match the previous element 1 or more times
+    - Similar concept with `*` but the minimum is 1 instead of 0
+    - There is a caveat about this operator, from `man grep` we found this section:
+    ```bash
+    In basic regular expressions the meta-characters ?, +, {, |, (, and ) lose their special meaning; instead use the backslashed versions \?, \+, \{, \|, \(, and \).
+    ```  
+    - so for these characters: `?, +, {, |, (, and )`, we need to use backslash
+    ```bash
+    grep -r 'let\+' /etc/ # use this 
+    grep -r 'let+' /etc/ # instead of this (will just check for normal plus (+) character) 
+    ``` 
+    - BUT, this is confusing, since previously we need to add backslash to period ("\.") in order for grep to read it as regular period. NOw it is in reverse. (Please refer to section on `Extended Regular Expressions` below)
+  - `{}`: Previous Element can exist "this many" times
+    - Example Usecase:
+    ```bash
+    egrep -r '0{3,}' /etc/ # match the lines where it contains string with 0 appears 3 or more times 
+    egrep -r '0{,3}' /etc/ # match the lines where it contains strings with 0 appears at most 3 times
+    egrep -r '0{3}' /etc/ # match the lines where it contains strings with 0 appears exactly 3 times
+    ``` 
+  - `?`: Make the previous element optional
+    - Example Usecase:
+    ```bash
+    egrep -rw 'disabled?' # without -w option, I think the '?' operator seems pointless. With -w now it will only matches "disable" and "disabled" ("disabling", "disables" will not)
+    ``` 
+  - `|`: Match one thing OR the other
+    - Example usecase:
+    ```bash
+    egrep -r 'enabled|disabled' /etc/ # match line containig string "disabled" and "enabled"
+    ``` 
+  - `[]`: Ranges or Sets
+    - ranges: match within a range
+      - `[a-z]`: alphabetical range
+      - `[A-Z]`: capital alphabetical range
+      - `[0-9]`: numeric range
+    - set: any kind of set of letters we want to include
+      - `[abz954]` : a set that will match "a", "b", "z", "9", "5", or "4"
+    - Example:
+    ```bash
+    egrep -r 'c[au]t' /etc/ # will match "cat" or "cut"
+    ``` 
+  - `()`: Subexpressions
+    - Similar to parentheses in math, creating a subexpression where those expression will be individually operated first regardless of its position in the expression
+    - Example:
+    ```bash
+    egrep -r '/dev/([a-z]|[A-Z]|[0-9]*)*' /etc/
+    $ # this will match "a-z" or "A-Z" or "0-9" any number of times, any number of times
+
+    $ # wait, what happens when we do this
+    egrep -r '/dev/[a-z]|[A-Z]|[0-9]*' /etc/
+    $ # grep actually will match everything T_T 
+    $ # | operator has low precedence, so it will read above expression as
+    $ # ('/dev/[a-z]') OR ('[A-Z]') OR ('[0-9]*')
+    ```
+  - `[^]`: Negated Ranges or Sets
+    - Example:
+    ```bash
+    egrep -r 'https[^:]' /etc/
+    $ # matches strings with https, but NOT followed by colon sign
+    ``` 
+
+## Extended Regular Expressions
+- Basically we can use this option in `grep`
+  - `-E` (extended regular expression)
+  - With this option, anything without using backlash will be counted as regular expression. Anythin with backslash will be counted as the actual character
+  ```bash
+  grep -Er '0+' /etc/ # same with "grep -r 'let\+' /etc/", but less confusing 
+  ```
+  - We can also use `egrep` instead of `grep -E`
+
+## Lab: File Content, Regular Expressions
+- [Lab: File Content, Regular Expressions](./labs/file_content_regular_expressions.bash)
