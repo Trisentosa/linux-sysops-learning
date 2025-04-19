@@ -22,7 +22,9 @@
   - [Search for Files](#search-for-files)
   - [Lab: File Permissions, Search for Files](#lab-file-permissions-search-for-files)
   - [Compare and Manipulate File Content](#compare-and-manipulate-file-content)
-- [Pagers and Vi Demo](#pagers-and-vi-demo)
+  - [Pagers and Vi Demo](#pagers-and-vi-demo)
+  - [Search Files with Grep](#search-files-with-grep)
+  - [Analyze Text Using Basic Regular Expressions](#analyze-text-using-basic-regular-expressions)
 
 # Introduction
 ## Course Link
@@ -449,7 +451,7 @@ Terminologies
   - ![diff_cmd](./resources/screenshots/diff_command.png)
   - ![sdiff_cmd](./resources/screenshots/sdiff_command.png)
 
-# Pagers and Vi Demo
+## Pagers and Vi Demo
 - Brief overviews of pagers and Vi
 - Pagers: display file in page format
   - `less`
@@ -481,5 +483,46 @@ Terminologies
     - `y`: yank a line (copy)
     - `d`: cut a line 
     - `p`: paste a line you copy or cut
-    - 
-      
+  
+## Search Files with Grep
+  - `grep`: a command line tool to search for text in a file
+    - Basic usage: `grep [options] '<text-to-search>' filename` 
+      - Common Options:
+        - `-i`: case insensitive
+        - `-r`: give path to directory, search recursively
+        - `--color`: color code the output
+        - `-v`: invert search (search one not matching with the text-to-search)
+        - `-w`: exact word match
+        - `-o`: only shows the matching text
+      - Example:
+      ```bash
+      grep 'password' /etc/ssh/sshd_config # search password in sshd_config
+      grep -i 'password' /etc/ssh/sshd_config # case insensitive search
+      grep -ri 'password' /etc/ # recursively search files within /etc/ directory for password (case insensitive)
+      grep -ri 'password' --color /etc/ # color code the output
+      grep -rvi 'password' --color /etc/ # color code the output
+      ``` 
+
+## Analyze Text Using Basic Regular Expressions
+- Regex (regular expressions): advanced search instruction
+- Common Regex Operators
+  - `^`: "The line begins with"
+    - Example Usecase:
+    ```bash
+    grep '^#' /etc/login.defs # search for lines starting with # sign (commented lines)
+    grep -v '^#' /etc/login.defs # inversely, search for non-commented lines
+    ``` 
+  - `$`: "The line ends with"
+    - Example Usecase:
+    ```bash
+    grep -w '7$' /etc/login.defs # match only a single 
+    ```
+  - `.`
+  - `*`
+  - `+`
+  - `{}`
+  - `?`
+  - `|`
+  - `[]`
+  - `()`
+  - `[^]`
