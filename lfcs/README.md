@@ -31,7 +31,8 @@
   - [Compress and Uncompress Files (Optional)](#compress-and-uncompress-files-optional)
   - [Back Up Files to a Remote System](#back-up-files-to-a-remote-system)
   - [Input-Output Redirection](#input-output-redirection)
-- [Lab: Archive, Back Up, Compress, IO Redirection](#lab-archive-back-up-compress-io-redirection)
+  - [Lab: Archive, Back Up, Compress, IO Redirection](#lab-archive-back-up-compress-io-redirection)
+  - [Work with SSL Certificates](#work-with-ssl-certificates)
 
 # Introduction
 ## Course Link
@@ -797,5 +798,80 @@ Terminologies
   grep -v '^#' /etc/login.defs | sort | column -t # output of grep -> input of sort -> make a nice tabular view out of it
   ``` 
 
-# Lab: Archive, Back Up, Compress, IO Redirection
+## Lab: Archive, Back Up, Compress, IO Redirection
 ![Lab: Archive, Back Up, Compress, IO Redirection](./labs/archive_back_up_compress_io_redirection.bash)
+
+## Work with SSL Certificates
+- Clarification: What we call SSL Nowadays is actually TLS
+- Terminology:
+  - SSL: "Secure Sockets Layer", it is used for a very long time, so in documentation many still refers to SSL even though most certificates already migrated to TLS
+  - TLS: "Transport Layer Security", considered to be an updgrade to SSL, especially in terms of the security
+- What is SSL certificate?
+  - [IBM: how SSL connection is established](https://www.ibm.com/docs/en/cics-tg-zos/9.3.0?topic=ssl-how-connection-is-established)
+  - SSL simplified overview
+    - ![ssl_simplified_view](./resources/screenshots/ssl_simplified_view.png)
+    - Certificate "authenticate" legitimacy of a website by cryptographic method
+    - Certificate allows user and website communication to be encrypted
+- How to create SSL certificate
+  - `openssl`: common linux utility used for create SSL certificate
+    - it will actually create tls certificate, despite the name `openssl`
+    - it can actually do more than just create ssl certificates, such as:
+      - Creation and management of private keys, public keys, and paramters
+      - Public key cryptographic operations
+      - **Creation of X.509 certificates**, CSRs and CRLs
+      - Calculation of messge digests and message authentication codes
+      - Encryption and decryption with ciphers
+      - SSL/TLS client and server tests
+      - Handling of S/MIME signed or encrypted mail
+      - Timestamp requests, generation, and verification
+    - We can access available `openssl` subcommands simply by typing `openssl` in your terminal
+      - We will be focusing on `x509` and `req` in this section
+      - To open manual for each subcommand we can use: `man openssl <subcommand>`
+        - `man openssl x509`
+        - `man openssl req`
+        - Note: we can look for **"EXAMPLES"** in each manual for examples for common usecases
+  - What is Certificate Signing Request (CSR) ?
+    - Digital certificate is not enough on their own
+    - When User visits any website (e.g. "example.com"), the browser need to be sure that the certificate is legitimate
+    - How they make sure ?
+      - Know that there is an entity called "Certificate Authority" (for example Google), they are the one that issue the certificate
+      - CSR make sure that the digital certificate is signed by the certificate authority
+      - What does it mean by sign ? 
+        - For example, when we request to create certificate locally for our website, we can send this request to a company like Google
+        - We will send to them public key, applicant informatin (domain name, location, etc). Google will then use a private key to issue and "sign" this certificate
+        - we can use this signed certificate for our website, so that browser can validate that our website has been signed by a certificate authority (each browser awares of known certificate authorities)
+  - Generate Private Key and Certificate Signing Request (CSR)
+    - Example
+    ```bash
+    openssl req -newkey rsa:2048 -keyout key.pem -out req.pem
+    $ # -newkey rsa:2048: ask openssl to generate a key of type rsa:2048 (2048 bits)
+    $ # -keyout key.pem: saves the key in key.pem file
+    $ # -out req.pem: saves the output (CSR) to req.pem file
+
+    $ # we will prompted several questions for the CSR.
+    $ # such as PEM (pass phrase), country, organization name, etc
+    ``` 
+    - Output:
+    ![openssl_req_output](./resources/screenshots/openssl_req_output.png)
+  - Generate a self signed certificate
+    - Generally, we need CA to sign our certificate
+    - But, for usecase such as generating certificate for internal uses, we can self-signed our certificate
+    - In this case, we can skip the process of creating CSR and sending it to CA
+    - Example:
+    ```bash
+    openssl req -x509 -noenc -newkey rsa:4096 -days 365 -keyout myprivate.key -out mycertificate.crt
+    $ # -x509: generate certificate of type x509 (without this option, by default openssl will create CSR instead of certificate)
+    $ # -noenc: not to ask for a password to encrypt (not recommended. just for example)
+    $ # -newkey rsa:4096 : use rsa algorithm 4096 bits, default is rsa:2048
+    $ # -days 365: make cert valid for 365 days
+    $ # -keyout myprivate.key: saves private key to myprivate.key
+    $ # -out mycertificate.crt: saves certificate to mycertificate.crt
+
+    openssl x509 -in mycertificate.crt -text # display the certificate "mycertificate.crt" in text form
+    $ # we can verify the information we input during certificate creation in "Issuer" field (abbreviated, such as C for Country)
+    ``` 
+    - Output of generated certificate
+    ![openssl_self_sign_output](./resources/screenshots/openssl_self_sign_output.png) 
+  - When to use `x509` or `req`
+    - `req`: request something, such request to make CSR or a digital certificate
+    - `x509`: operation related to x509 certificate such as displaying, editing, or signing a certificate request
