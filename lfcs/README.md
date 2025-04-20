@@ -33,6 +33,8 @@
   - [Input-Output Redirection](#input-output-redirection)
   - [Lab: Archive, Back Up, Compress, IO Redirection](#lab-archive-back-up-compress-io-redirection)
   - [Work with SSL Certificates](#work-with-ssl-certificates)
+- [Git: Basic Operations](#git-basic-operations)
+  - [Git- Staging and Commiting Changes](#git--staging-and-commiting-changes)
 
 # Introduction
 ## Course Link
@@ -875,3 +877,44 @@ Terminologies
   - When to use `x509` or `req`
     - `req`: request something, such request to make CSR or a digital certificate
     - `x509`: operation related to x509 certificate such as displaying, editing, or signing a certificate request
+
+# Git: Basic Operations
+- What is Git:
+  - It is a Distributed version control system
+  - A version control system (VCS), simply a software that does:
+    - tracking of changes to files over time, able to rollback to previous versions, and manage different versions of a project
+    - allowing developers to collaborate effectively and keep things organized
+  - An also common term is "repository", it is:
+    - place where code is stored and information about each change
+    - usually there are 2 repositories: local and remote
+      - local: private repository to your own machine
+      - remote: collective repository in a central location (e.g. Github) where all members can access
+- Examples:
+```bash
+sudo apt install git # install if not yet installed
+git config --global user.name "tri"
+git config --global user.email "tri@example.com" 
+$ # these configs are only informations for other team members
+
+git init # initialize a repository in current directory
+ls .git # stores information of our git repository
+``` 
+
+## Git- Staging and Commiting Changes
+- Lets create 2 new files in our new repository
+```bash
+echo "The ORIGINAL file1" > file1.txt
+echo "The ORIGINAL file2" > file2.txt
+``` 
+- Staging: tell git the stuff we have worked on, and tell them to track it 
+  - Example:
+  ```bash
+  git status # we can first check the status of our working stage (what change that we made)
+  $ # shown that file1 and file2 is added, but still untracked
+
+  git add file1.txt file2.txt # add file1 and file2 to staging area
+  git status # this will show that both files are added but still need to be commited 
+  $ # add simply telss git to track the changes on these files as a single set of changes (for example, changes to fix a bug)
+
+  git commit
+  ``` 
