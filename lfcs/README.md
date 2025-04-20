@@ -35,6 +35,8 @@
   - [Work with SSL Certificates](#work-with-ssl-certificates)
 - [Git: Basic Operations](#git-basic-operations)
   - [Git- Staging and Commiting Changes](#git--staging-and-commiting-changes)
+  - [Git - Branches and Remote Repositories](#git---branches-and-remote-repositories)
+  - [Lab: Git \& SSL Certificates](#lab-git--ssl-certificates)
 
 # Introduction
 ## Course Link
@@ -801,7 +803,7 @@ Terminologies
   ``` 
 
 ## Lab: Archive, Back Up, Compress, IO Redirection
-![Lab: Archive, Back Up, Compress, IO Redirection](./labs/archive_back_up_compress_io_redirection.bash)
+[Lab: Archive, Back Up, Compress, IO Redirection](./labs/archive_back_up_compress_io_redirection.bash)
 
 ## Work with SSL Certificates
 - Clarification: What we call SSL Nowadays is actually TLS
@@ -916,5 +918,73 @@ echo "The ORIGINAL file2" > file2.txt
   git status # this will show that both files are added but still need to be commited 
   $ # add simply telss git to track the changes on these files as a single set of changes (for example, changes to fix a bug)
 
-  git commit
+  git reset file1.txt # un-stage a file (opposite of add)
+
+  git add file1.txt # let's add it again
+
+  $ # lets explore some shortcuts for git add
+  git add . # add all files that are changed
+  git add "*.html" # add all files ends with .html
+  git add resources/ # add an entire sub-directory
+  git add "resources/*.html" # combine the two above
+  git reset "resources/*.html" # works also with reset
+
+  git commit -m "added our first two files" # commit the files that is inside the staging area
+  $ # commit essentially makes a snapshot, of all the changes happening to the files inside staging area
+
+  git rm file2.txt # similar to add, but for deletion of files operation 
   ``` 
+
+## Git - Branches and Remote Repositories
+- Branch: a branch represent a different version of a repository at a single point of time
+  - [git branch overview](https://www.w3schools.com/git/git_branch.asp)
+  - Usually, we have a "default" branch. the name usually goes with "main" or "master" branch (the one that is shipped out)
+  - Example:
+  ```bash
+  git branch 1.1-testing # create 1.1-testing branch
+  git branch --list # list the branch
+  git checkout 1.1-testing # go to 1.1-testing branch
+
+  $ # do changes to files...
+  git status # preview changes
+  git commit -a -m "changes" 
+  $ # -a: shorthand to add + commit all files
+
+  git log # history of changes in the repository
+  git log --raw # more indepth view of each changes of each commit
+  $ # form log output you can see the hash of the git. for example:
+  $ # commit 13727496e4d4b6d2768e88d0078755f4b2bbfaeb
+  git show 13727496 # don't need to use the full hash. this will show the exact changes during this commit 
+  ``` 
+  - Merging branches: 
+    - [git branch basics](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging)
+    - Example:
+    ```bash
+    git checkout master
+    git merge 1.1-testing # merge 1.1-testing to master
+    ``` 
+- Remote Repositories
+  - So far we only played within our local repositories
+  - To interact with remote repository, we need to "push" (local -> remote) or "pull"(remote -> local) changes
+  - Example: (with github.com)
+  ```bash
+  git remote add origin git@github.com:xxx/yyy.git 
+  git remote -v # shows the remote repository associated with the project
+
+  ssh-keygen # generate ssh key pair. 
+  $ # in the prompt, can just click enter for the default setting
+  $ # Example Output
+  $ # Your identification has been saved in /home/lfcs/.ssh/id_ed25519
+  $ # Your public key has been saved in /home/lfcs/.ssh/id_ed25519.pub
+
+  $ # please copy the public key inside the github's Authentication Key setting
+  git push origin master # push our commits to remote repository called origin 
+  git pull origin master # pull from origin remote repository to our local
+
+  $ # new member joined, how they can get the project
+  mkdir work # new repo for example
+  git clone git@github.com:xxx/yyy.git # git clone <connection-stream>
+  ``` 
+
+## Lab: Git & SSL Certificates
+[Lab: Git & SSL Certificates](./labs/git_and_ssl_certificates.bash)
