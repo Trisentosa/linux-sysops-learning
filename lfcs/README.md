@@ -33,10 +33,12 @@
   - [Input-Output Redirection](#input-output-redirection)
   - [Lab: Archive, Back Up, Compress, IO Redirection](#lab-archive-back-up-compress-io-redirection)
   - [Work with SSL Certificates](#work-with-ssl-certificates)
-- [Git: Basic Operations](#git-basic-operations)
+  - [Git: Basic Operations](#git-basic-operations)
   - [Git- Staging and Commiting Changes](#git--staging-and-commiting-changes)
   - [Git - Branches and Remote Repositories](#git---branches-and-remote-repositories)
   - [Lab: Git \& SSL Certificates](#lab-git--ssl-certificates)
+- [Operations Deployment](#operations-deployment)
+  - [Boot, Reboot, and Shutdown Systems](#boot-reboot-and-shutdown-systems)
 
 # Introduction
 ## Course Link
@@ -880,7 +882,7 @@ Terminologies
     - `req`: request something, such request to make CSR or a digital certificate
     - `x509`: operation related to x509 certificate such as displaying, editing, or signing a certificate request
 
-# Git: Basic Operations
+## Git: Basic Operations
 - What is Git:
   - It is a Distributed version control system
   - A version control system (VCS), simply a software that does:
@@ -988,3 +990,33 @@ echo "The ORIGINAL file2" > file2.txt
 
 ## Lab: Git & SSL Certificates
 [Lab: Git & SSL Certificates](./labs/git_and_ssl_certificates.bash)
+
+# Operations Deployment
+
+## Boot, Reboot, and Shutdown Systems
+- `systemctl`: stands for "system control"
+  - Example usage (for reboot)
+    ```bash
+    systemctl reboot # reboot the machine
+    sudo systemctl reboot # need to be root user for reboot
+
+    $ # in case reboot won't execute (use with precaution)
+    sudo systemctl reboot --force  
+    sudo systemctl poweroff --force
+
+    $ # in case reboot or poweroff won't exectue with --force (use with precaution)
+    $ # program will not save progress and immediately shutteddown
+    sudo systemctl reboot --force --force
+    sudo systemctl poweroff --force --force
+    ```
+- `shutdown`: can be used to scheduling system shut down
+  - Example:
+  ```bash
+  sudo shutdown 02:00 # 00:00 to 23:59
+  sudo shutdown +15 # shut down after 15 min
+
+  sudo shutdown -r 02:00 # -r will reboot instead of shutdown
+
+  # wall message: notify users that the system will reboot or shut down
+  sudo shutdown -r +1 'Scheduled restart to upgrade linux kernel'
+  ``` 
