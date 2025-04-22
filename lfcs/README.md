@@ -39,6 +39,8 @@
   - [Lab: Git \& SSL Certificates](#lab-git--ssl-certificates)
 - [Operations Deployment](#operations-deployment)
   - [Boot, Reboot, and Shutdown Systems](#boot-reboot-and-shutdown-systems)
+  - [Boot or Change System into Different Operating Modes](#boot-or-change-system-into-different-operating-modes)
+  - [Use Scripting to Automate System Maintenance Tasks](#use-scripting-to-automate-system-maintenance-tasks)
 
 # Introduction
 ## Course Link
@@ -1020,3 +1022,42 @@ echo "The ORIGINAL file2" > file2.txt
   # wall message: notify users that the system will reboot or shut down
   sudo shutdown -r +1 'Scheduled restart to upgrade linux kernel'
   ``` 
+
+## Boot or Change System into Different Operating Modes
+- Operating System boot environment
+  - `systemctl get-default`
+    - example output:
+      - "graphical.target": the OS supposed to boot into graphical environment
+  - `sudo systemctl set-default multi-user.target`
+    - set the os boot default to text based (more lightweight)
+  - `sudo systemctl isolate graphical.target`
+    - returns back to GUI based without doing reboot
+    - temporary only, after reboot, will use the `get-default` again
+  - Other environments:
+    - `emergency.target`: root will be read only, run with as small amount of programs as possible, ususally for debugging
+    - `resuce.target`: only access root shell (so need to know root password), a bit more porgram than emergency.target
+
+## Use Scripting to Automate System Maintenance Tasks
+- What happened when we login to linux based OS:
+  - a program called `bash` opens, and we can see it via the text-based environment(our command line)
+  - all commands we write will be interpreted by `bash`
+  - `bash` also referred to "command interpreter" or "shell"
+  - other than via command line, we can also execute bash via script
+- Scripting
+  - file where we put command for our interpreter, where interpreter will execute the command in order
+  - Example:
+  ```bash
+  touch script.sh # create script shell file
+  vim script.sh
+  ``` 
+  - `script.sh`:
+  ```bash
+  #! /bin/bash 
+
+  #This is comment
+  date >> /tmp/script.log
+  cat /proc/version >> /tmp/script.log
+  ``` 
+    - Explanation:
+      - `#! /bin/bash`: it is also called shebang. it is a full path of the command interpreter where we want to run the script. MUST be in the first line, MUST NOT have any space before the pound sign
+  - 
