@@ -1060,4 +1060,37 @@ echo "The ORIGINAL file2" > file2.txt
   ``` 
     - Explanation:
       - `#! /bin/bash`: it is also called shebang. it is a full path of the command interpreter where we want to run the script. MUST be in the first line, MUST NOT have any space before the pound sign
-  - 
+  - Bash Built-ins
+    - We will Look into 2 built-ins this session; `if` and `test`
+    ```bash
+    help # output available bash buil-ins
+    help if # help page for if plugin
+
+    vim archive-apt.sh  
+    chmod +x archive-apt.sh
+
+    ./archive-apt.sh
+    ls /tmp # verify script works 
+    ```
+  - `archive-apt.sh`
+  ```bash
+  #! /bin/bash
+  tar acf /tmp/arcive.tar.gz /etc/apt 
+  ``` 
+  - `archive-apt.sh`(updated)
+    - concern with old script if `/etc/apt` missing some file, will create a broken tar.gz file
+    - with this modification it will rename the last tar.gz file with tar.gz.old 
+    - `test`: can check multiple conditions based on the argument passed, here we check if file exist
+    ![hel_test_plugin](./resources/screenshots/help_test_plugin.png) 
+    ```bash
+    #! /bin/bash
+    if test -f /tmp/archive.tar.gz; then
+      mv /tmp/archive.tar.gz /tmp/archive.tar.gz.OLD
+      tar acf /tmp/arcive.tar.gz /etc/apt
+    else
+      tar acf /tmp/arcive.tar.gz /etc/apt
+    fi
+    ``` 
+  - Most command works with if blocks, Why ?
+    - most commands returns ESQ (Exit Status Quo)
+    ![esq](./resources/screenshots/esq.png)  
