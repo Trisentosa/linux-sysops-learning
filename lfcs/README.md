@@ -41,6 +41,7 @@
   - [Boot, Reboot, and Shutdown Systems](#boot-reboot-and-shutdown-systems)
   - [Boot or Change System into Different Operating Modes](#boot-or-change-system-into-different-operating-modes)
   - [Use Scripting to Automate System Maintenance Tasks](#use-scripting-to-automate-system-maintenance-tasks)
+  - [Manage Startup Processes and Services](#manage-startup-processes-and-services)
 
 # Introduction
 ## Course Link
@@ -1094,3 +1095,23 @@ echo "The ORIGINAL file2" > file2.txt
   - Most command works with if blocks, Why ?
     - most commands returns ESQ (Exit Status Quo)
     ![esq](./resources/screenshots/esq.png)  
+
+## Manage Startup Processes and Services
+- `init system`: system that manage startup services, certain process and services that run when we boot up our linux system
+  - Btw, a service is essentially can be a process or a group of processes that achieve under same goal
+  - Behavior:
+    - Startup in certain order (app w/ dependency to other app will started after its dependency started)
+    - if service crash, it can be restarted automatically
+  - `systemd units`: an instruction how it know how a startup service have to do its job
+    - essentially, text files that describe the necessary logic (what to do when crash, startup)
+    - There are several types of units, such as:
+      - ** service <- we will be focusing on service unit  **
+        - a service unit, tells the systemd how to manage an entire lifecycle of a service or application
+        - ![man_systemd](./resources/screenshots/man_systemd.png)
+      - socket
+      - device
+      - timer
+  - `systemd`: collection of tools, component, and applications that help start, operate, and manage linux based OS
+    - essentially, an application with collection of tools that responsible for system initialization and system monitoring
+    - sometimes also called service manager 
+  - 
