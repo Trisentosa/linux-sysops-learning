@@ -1113,5 +1113,45 @@ echo "The ORIGINAL file2" > file2.txt
       - timer
   - `systemd`: collection of tools, component, and applications that help start, operate, and manage linux based OS
     - essentially, an application with collection of tools that responsible for system initialization and system monitoring
-    - sometimes also called service manager 
-  - 
+    - also called service manager 
+- Service file in detail
+  - Example:
+  ```bash
+  systemctl cat ssh.service # check the service file
+  systemctl edit --full ssh.service # edit systemctl file
+  systemctl reverse ssh.service # restore to default setting 
+  systemctl status ssh.service # status of service
+  systemctl stop ssh.service # stop a service
+  systemctl start ssh.service # start a service
+  systemctl restart ssh.service # restart a service, closing and reopoeing the service (disrupt current process that use this service)
+  systemctl reload ssh.service # reload a service, gracefully reload the setting. Not all service can be reloaded
+  systemctl reload-or-restart ssh.service # reload or restart a service (will reload first, if cannot then restart)
+  systemctl disable ssh.service # disable the service (not load on start). enable for the reverse
+  systemctl is-enabled ssh.service # check the status of the service
+  systemctl enable --now ssh.service # enable the service + start it now. if use disable, it will both disable and stop the service
+  ```
+  - ![systemctl_file](./resources/screenshots/systemctl_file.png)
+  - Explanation of systemctl file
+    - `ExecStart`: command to run when ssh daemon is started
+    - `ExecReload`: command to run when ssh daemon is reloaded
+    - `Restart`: tells when ssh daemon should be restarted
+  - ![systemctl_status](./resources/screenshots/systemctl_status.png)
+  - Explanation of systemctl status:
+    - `Loaded:....;enabled`: the enabled/disabled in the "Loaded" field tells whether systemd will start this service when system boot
+    - `Active: active(running)`
+      - active(running): currently launched and service is running
+      - active(exited): successfully launched, did it task and already finished
+    - `PID`: process id of this service
+    - shows log lines as well, to quick troubleshoot
+  - For some service they may be stubborn (even if we have stop and disabled them, somehow they still run)
+    - Why? this may happen because of service ordering (e.g. if service 1 starts service 2 as part in its startup process, then service 2 will still run even if service 2 is stopped and disabled)
+    - How to fix this ? can use `mask` (other service cannot startup this service no matter what)
+    ```bash
+    sudo systemctl mask atd.service # cannot be enabled/started. to unmask use unmask
+    ```
+  - Listing services
+  ```bash
+  systemctl list-units --type service --all # list all services available
+  ``` 
+
+```
