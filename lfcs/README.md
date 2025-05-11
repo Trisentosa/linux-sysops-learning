@@ -987,7 +987,7 @@ echo "The ORIGINAL file2" > file2.txt
   git pull origin master # pull from origin remote repository to our local
 
   $ # new member joined, how they can get the project
-  mkdir work # new repo for example
+  mkdir work # new repo for example```
   git clone git@github.com:xxx/yyy.git # git clone <connection-stream>
   ``` 
 
