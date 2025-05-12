@@ -42,6 +42,8 @@
   - [Boot or Change System into Different Operating Modes](#boot-or-change-system-into-different-operating-modes)
   - [Use Scripting to Automate System Maintenance Tasks](#use-scripting-to-automate-system-maintenance-tasks)
   - [Manage Startup Processes and Services](#manage-startup-processes-and-services)
+  - [Create systemd Service](#create-systemd-service)
+  - [Lab: Scripting, Manage Startup Process and Services](#lab-scripting-manage-startup-process-and-services)
 
 # Introduction
 ## Course Link
@@ -1154,4 +1156,79 @@ echo "The ORIGINAL file2" > file2.txt
   systemctl list-units --type service --all # list all services available
   ``` 
 
-```
+## Create systemd Service
+- Create a systemd service, with following requirement:
+  - Main Objective: watch our application so when app crashes, we can restart it
+  - Boot: automatically startup the app
+  - Steps:
+    1. The app:
+      ```bash
+      #!/bin/sh
+      echo "App Started" | systemd-cat -t MyApp -p info
+      sleep 5
+      echo "App Crashed" | systemd-cat -t MyApp -p err
+      ```
+      - Explanation:
+        - **line 1**: systemd-cat is a logger tool, it will write "App Started" message to systemd log with identifier "MyApp" and priority type "info"
+        - **line 2**: sleep for 5 secondds
+        - **line 3**: similar to line 1, but priority is error 
+    2. Enable execution
+      ```bash
+      chmod +x /usr/local/bin/myapp.sh
+      ```  
+    3. Create systemd service
+      - Can always refer to `man systemd.service` (especially EXAMPLES section is very helpful) 
+      - Another good reference is from directory `/lib/systemd/system`, where it contains existing sytemd unit files
+        - let's copy from ssh.service for start
+        ```bash
+        sudo su
+        cp /lib/systemd/system/ssh.service /etc/systemd/system/myapp.service
+        vim /etc/systemd/system/myapp.service
+        ``` 
+      - Please note 3 main components inside systemd service file:
+        - `[Unit]`: contains metadata about the service
+        - `[Service]`: contains information about how to start the service
+        - `[Install]`: contains information about how to install the service
+      - `myapp.service`:
+        ```bash
+        [Unit]
+        Description=My Application
+        After=network.target auditd.service
+
+        [Service]
+        ExecStartPre=echo "Systemd is preparing to start MyApp (ExecStartPre)"
+        ExecStart=/usr/local/bin/myapp.sh
+        KillMode=process
+        Restart=always
+        RestartSec=1
+        Type=simple
+
+        [Install]
+        WantedBy=multi-user.target
+        ```
+        - Explanation:
+          - `[Unit]`:
+            - `Description`: description of the service
+            - `After`: specify the order of the service, in this case, we want to start after network and auditd service
+          - `[Service]`:
+            - `ExecStartPre`: command to run before starting the service
+            - `ExecStart`: command to run when starting the service
+            - `KillMode`: how to kill the service (can be `process`, `control-group`, `mixed`, `none`)
+            - `Restart`: when to restart the service
+            - `RestartSec`: how long to wait before restarting the service
+            - `Type`: type of the service (can be `simple`, `forking`, `oneshot`, `dbus`, `notify`, `idle`)
+          - `[Install]`:
+            - `WantedBy`: specify the target to install the service (can be `multi-user.target`, `graphical.target`, `network.target`, etc)
+          - Note: this is just some small example, there are many options to explore with configuring system service
+      - Test the service
+        ```bash
+        systemctl daemon-reload # when we add/edit/remove a systemd service file, we need to reload the daemon
+        systemctl start myapp.service # start myapp.service
+        sudo journalctl -f # check the logs 
+        ```
+        - Output:
+          - ![systemd_myapp_logs](./resources/screenshots/systemd_myapp_logs.png)
+
+## Lab: Scripting, Manage Startup Process and Services
+
+[Lab: Scripting, Manage Startup Process and Services](./labs/scripting_manage_startup_process_and_services.bash)
