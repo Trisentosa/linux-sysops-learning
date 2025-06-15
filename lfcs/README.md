@@ -44,6 +44,7 @@
   - [Manage Startup Processes and Services](#manage-startup-processes-and-services)
   - [Create systemd Service](#create-systemd-service)
   - [Lab: Scripting, Manage Startup Process and Services](#lab-scripting-manage-startup-process-and-services)
+  - [Diagnose and Manage Processes](#diagnose-and-manage-processes)
 
 # Introduction
 ## Course Link
@@ -1232,3 +1233,88 @@ echo "The ORIGINAL file2" > file2.txt
 ## Lab: Scripting, Manage Startup Process and Services
 
 [Lab: Scripting, Manage Startup Process and Services](./labs/scripting_manage_startup_process_and_services.bash)
+
+## Diagnose and Manage Processes
+
+- Process: a running instance of a program
+- `ps`: common command to inspect process
+  - Two types of syntaxes it supports
+    - `Unix`: with option `-` (e.g. `ps -ef`) 
+    - `BSD`: without option `-` (e.g. `ps aux`)
+  - `ps`:
+    - `ps` by itself will show only processes associated with the current terminal session
+  - `ps -ef`:
+    - `e`: select all processes
+    - `f`: full format listing
+  - `ps aux`:
+    - `a`: select all processes
+    - `u`: user-oriented format
+    - `x`: select processes without controlling terminal
+    - Example Output:
+      - ![ps_aux](./resources/screenshots/ps_aux.png)
+      - `%CPU`: percentage of CPU used by the process
+      - `%MEM`: percentage of memory used by the process
+      - `VSZ`: virtual memory size (unit is KB)
+      - `RSS`: size of physical memory that process is using (unit is KB)
+      - `STAT`: process state using code
+        - `s`: sleeping
+        - `r`: running
+        - `z`: zombie
+        - `t`: stop
+        - `i`: idle
+      - `TIME`: cumulative CPU time of the process
+      - `COMMAND`: command that started the process, some command has square brackets `[]` around it (e.g. [kthreadd]), it means it is a kernel thread (usually no need to interact with it). The one we usually interact with is the one without the square brackets, or called user space process
+  - Example `ps` basic usage:
+    ```bash
+    ps 1 # show process with pid 1
+    ps u 1 # show process with pid 1, in user-oriented format
+    ps -U trisentosa # show process of user trisentosa
+    
+    pgrep sshd # show pid of sshd process
+    pgrep -a sshd # show pid and command of sshd process
+
+    px fax # forest display
+    ``` 
+- Nice: a value in which how "nice" a process is to other process
+  - range: -20 (most favorable scheduling) to 19 (least favorable scheduling). lower number considered less "nice"
+  - default: 0
+  - Example:
+    - process A: nice value of -20
+    - process B: nice value of 19
+    - process A will get more CPU time than process B (e.g. A may get 95% of CPU, B may get 5% of CPU). But exact percentage depends on many factors (e.g. number of CPU, number of process, etc)
+  - `nice` command: launch a process with a specific nice value, or change the nice value of a process
+    - `nice -n 10 <command>`: run command with nice value of 10
+    - `renice -n 10 -p <pid>`: change nice value of process with pid to 10
+  - To show nice in `ps`, can use `ps l` (`ps lax` for all)
+  - need root privilege to assign a nice value below 0
+- `top`: continuously watch processes in real time
+  - `htop`: interactive process viewer, more user friendly than `top`, but not installed by default
+- Signals: linux way to tell a process to stop what they're doing, and respond to this signal. But only, if the process is designed to respond to that signal. Only exception to this rule is `SIGSTOP` or `SIGKILL`
+  - `SIGSTOP`: stop a process, but can be resumed with `SIGCONT`
+  - `SIGKILL`: kill a process, cannot be caught or ignored by a process
+  - To see list of signals, can use `kill -l`
+  - To send signal, can use `kill -<signal> <pid>` (e.g. `kill -9 <pid>` to send SIGKILL or `kill -SIGKILL <pid>`)
+  - If not `<signal>` is passed, `SIGTERM` will be sent by default
+  - `pkill`: can also be used to send signal to a process, can put process name instead of pid, can use partial name
+    - `pkill -9 sshd`: send SIGKILL to all sshd process
+  - `killall`: similar to `pkill`, but can only send signal to process with same name instead of partial name
+    - `killall -9 sshd`: send SIGKILL to all sshd process
+- Foreground / Background process:
+  - Foreground process: process that is running in the terminal, and will block the terminal until it finish
+  - Background process: process that is running in the background, and will not block the terminal
+  - For example:
+    - if you run `vim file.txt` and then do `Ctrl+Z`, it will put the `vim` process from foreground to background process
+    - To open the back the vim (from bg -> fg), you can use `fg` command, followed with the job id of your vim (e.g. `fg 1`)
+    - But if you `Ctrl+Z` on a process that supposed to be running in the background instead of foreground (e.g. bash script to run forever), use `bg` instead of `fg`
+  - To get list of jobs and job id, can use `jobs -l`
+  - To run a process in the background, can use `&` at the end of the command
+    - `sleep 10 &`: run sleep 10 in the background
+    - but remember that only background process instantiated by terminal only exist while that session is alive
+      - If a terminal is closed while the process by that terminal is running then an `HUP` (Hang Up) signal is called and it will kill all that session processes.
+      - To avoid `HUP` signal, can use `nohup` (e.g. nohup <any command>). Output will be directed by default to `nohup.out`
+- lsof (list of open files): useful to check the files that is being used by a certain process
+  - For example, check which process is using a certain port
+    - `lsof -i :22` (check which process is using port 22)
+    - `lsof -p <pid>` (check which files is used by a certain process)
+    - `lsof /dev/sda` (check which process is using a certain device)
+    - `lsof /var/log/syslog` (check which process is using a certain file)
