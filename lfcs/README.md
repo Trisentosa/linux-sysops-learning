@@ -46,6 +46,7 @@
   - [Lab: Scripting, Manage Startup Process and Services](#lab-scripting-manage-startup-process-and-services)
   - [Diagnose and Manage Processes](#diagnose-and-manage-processes)
   - [Locate and Analyze System Log Files](#locate-and-analyze-system-log-files)
+  - [Lab: Manage Processes and Analyze Log Files](#lab-manage-processes-and-analyze-log-files)
 
 # Introduction
 ## Course Link
@@ -1350,4 +1351,10 @@ echo "The ORIGINAL file2" > file2.txt
     - `journalctl -S <time>` and `journalctl -U <time>`: show all logs between certain time
       - Example: `journalctl -S '2021-01-01 00:00:00' -U '2021-01-01 01:00:00'`: show all logs between 1am to 2am on 1st January 2021
       - `journalctl --since '2021-01-01 00:00:00' --until '2021-01-01 01:00:00'`: alternative syntax
+    - `var/log/journal`: directory where journalctl store the logs
+- `last`: show last login of all users
+- `lastlog`: show last login of all users, but only show users that has logged in at least once
+
+## Lab: Manage Processes and Analyze Log Files
+- [Lab: Manage Processes and Analyze Log Files](./labs/manage_processes_and_analyze_log_files.bash)
     
