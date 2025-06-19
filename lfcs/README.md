@@ -47,6 +47,8 @@
   - [Diagnose and Manage Processes](#diagnose-and-manage-processes)
   - [Locate and Analyze System Log Files](#locate-and-analyze-system-log-files)
   - [Lab: Manage Processes and Analyze Log Files](#lab-manage-processes-and-analyze-log-files)
+  - [Schedule Task to Run at a Set Date and Time](#schedule-task-to-run-at-a-set-date-and-time)
+  - [Lab: Schedule Task](#lab-schedule-task)
 
 # Introduction
 ## Course Link
@@ -1357,4 +1359,71 @@ echo "The ORIGINAL file2" > file2.txt
 
 ## Lab: Manage Processes and Analyze Log Files
 - [Lab: Manage Processes and Analyze Log Files](./labs/manage_processes_and_analyze_log_files.bash)
-    
+
+## Schedule Task to Run at a Set Date and Time
+- 3 main tools: `cron`, `anacron`, and `at`. Here are the differences
+  - ![cron_anacron_at](./resources/screenshots/cron_anacron_at.png)
+- `crontab`
+  - `/etc/crontab`: system wide cron table, please note in some cases package manager might change this file. Therefore safer to use personal user cron table
+  - To access:
+    - user cron table, use `crontab -e`
+    - root cron table, use `sudo crontab -e`
+    - other user cron table, use `crontab -e -u <user>`
+  - syntax: 
+    - ![crontab_syntax](./resources/screenshots/crontab_syntax.png)
+    - notation:
+      - `*`: every possible values (e.g. every minute, every hour, ...)
+      - `,`: multiple values (e.g. "0,6,12,18" in hours specify to run cron on those hours)
+      - `-`: range (e.g. "2-4" -> run 2, 3, 4)
+      - `/`: steps (e.g. "*/4" -> in hour, means will run every 4 hour)
+      - These notation can be combined
+  - Example:
+    - Note: please use `which <command>` to make sure that you use the correct full absolute path to the command (e.g. `which touch`)
+    ```crontab
+    30 6 * * * /usr/bin/touch test_passed  <- run every day at 6:30 AM
+    ```
+  - Other common options:
+    - `-r`: remove cron table entirely
+    - `-l`: list cron table
+    - `-u <user>`: specify user
+  - Cronjob special directories:
+    - `etc/cron.hourly/`, `etc/cron.daily/`, `etc/cron.weekly/`, `etc/cron.monthly/`: run scripts in those directory as per the name suggest
+- `anacron`
+  - To install: `sudo apt install anacron`
+  - vim `/etc/anacrontab`
+  - Syntax: 
+    - 4 fields: 
+      - 1st field: period
+        - `1` = daily
+        - `7` = weekly
+        - `30` = monthly
+        - `@monthly` = monthly
+        - `@weekly` = weekly
+        - `@daily` = daily
+        - `@hourly` = hourly
+      - 2nd field: delay in minutes before running the job
+        - e.g. `5` = wait 5 minutes before execution.
+      - 3rd field: job identifier
+      - 4th field: command to run
+    - Example:
+    ```anacrontab
+    1 15 cron.daily run-parts --report /etc/cron.daily
+    ```
+  - to verify: `anacron -T` (will log message if there is error) 
+- `at`
+  - To install: `sudo apt install at`
+  - `/etc/at.allow` and `/etc/at.deny`: list of user allowed or unallowed for using `at` command
+  - syntax: `at <time>`
+    - e.g. 
+      - `at '15:00'`
+        - type command in prompt
+      - `at '25 August 15:00`
+      - `at 'now + 3 hours`
+  - `atq`: list of jobs
+    - first number is the job id
+  - `atrm <job-id>`: remove job by job id
+  - `at -c <job-id>`: check the job detail
+  - Use `Ctrl+D` to exit the prompt
+
+## Lab: Schedule Task
+- [Lab: Schedule Task](./labs/schedule_task.bash)
