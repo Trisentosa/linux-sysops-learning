@@ -1483,7 +1483,19 @@ echo "The ORIGINAL file2" > file2.txt
   ```
 
 ## Install Software by Compiling Source Code
-- 
+- Example: setup `htop` from github
+  ```bash
+  sudo apt install build-essential # Step 1: install necessary build tools
+  git clone https://github.com/htop-dev/htop.git # Step 2: clone the repository
+  cd htop # Step 3: move into the repository
+  ./autogen.sh # Step 4: run the autogen script
+  ./configure # Step 5: configure the build using default configuration, use ./configure --help to see more detailed option
+  make # Step 6: build the software
+  ./htop # try to run htop
+
+  sudo make install # Step 7: install the software in /usr/local/bin (so no need to run htop by specifying the full path)
+  htop # should be able to run htop directly
+  ```
 
 ## Lab: Manage Software, Repositories & Install Software from Source
 - [Lab: Manage Software, Repositories & Install Software from Source](./labs/manage_software_repositories_install_software_from_source.bash)
