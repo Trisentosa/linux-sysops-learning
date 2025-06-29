@@ -49,6 +49,10 @@
   - [Lab: Manage Processes and Analyze Log Files](#lab-manage-processes-and-analyze-log-files)
   - [Schedule Task to Run at a Set Date and Time](#schedule-task-to-run-at-a-set-date-and-time)
   - [Lab: Schedule Task](#lab-schedule-task)
+  - [Manage Software with Package Manager](#manage-software-with-package-manager)
+  - [Configure the Repositories of Package Manager](#configure-the-repositories-of-package-manager)
+  - [Install Software by Compiling Source Code](#install-software-by-compiling-source-code)
+  - [Lab: Manage Software, Repositories \& Install Software from Source](#lab-manage-software-repositories--install-software-from-source)
 
 # Introduction
 ## Course Link
@@ -1427,3 +1431,59 @@ echo "The ORIGINAL file2" > file2.txt
 
 ## Lab: Schedule Task
 - [Lab: Schedule Task](./labs/schedule_task.bash)
+
+## Manage Software with Package Manager
+- `apt` (Advanced Package Tool): used to manage software packages on Debian-based Linux distributions
+  - `apt update`: update the package list (refreshes local database with package from repositories)
+  - `apt upgrade`: upgrade the installed packages (commonly combined with `apt update`; e.g. `sudo apt update && apt upgrade`)
+  - `apt install <package-name>`: install a package (`sudo apt update && apt install <package-name>` to ensure we really always get the latest package version)
+  - `apt remove <package-name>`: remove a package
+  - `apt autoremove`: remove unused dependencies (usually after removing some package). Doing it directly (e.g. `apt autoremove nginx`), will automatically remove no longer needed, in this case if a package only used by nginx and nothing else, then it will be removed
+  - `apt purge <package-name>`: remove a package and its configuration files
+  - `apt show <package-name>`: show information about a package
+  - `apt search keyword`: search for a package and the description containing the "keyword" we are looking for
+    - if we only want to search by the package name only, we can use the `apt search --names-only keyword
+    - `apt search keyword-1 keyword-2`: search for multiple packages that contain keyword-1 or keyword-2
+- `dpkg`: low level package manager, used by `apt` behind the scenes. We can use this to inspect the package
+  - `dpkg --listfiles <package-name>`: list all files installed by a package
+  - `dpkg --search /usr/sbin/nginx`: find which package(s) installed a certain file
+
+## Configure the Repositories of Package Manager
+- `/etc/apt/sources.list`: main repository list file (as of ubuntu 24.04, the location is moved to `/etc/apt/sources.list.d/ubuntu.sources`)
+  - ![sources_list](./resources/screenshots/package_manager_repository_list.png)
+  - format: `deb <repository-url> <distribution> <components>`
+    - Explanation:
+      - `Types: deb`: Tell package manager (e.g. apt) to inspect `deb` type package in this repository 
+      - `URIs`: pointing to the repository, tell the package manager where to install package manager from
+      - `Suites`: set of packages associated with specific release or distribution
+      - `Components`: repository contains type of components (e.g. main(free and open source, supported by ubuntu), restricted(open source, but have restriciton), universe (open source, but may not be supported by ubuntu), multiverse (not free and open source))
+      - `Signed-by`: 
+- Enable third party repositories
+  - Example: latest version of docker repository
+  ```bash
+  curl "https://download.docker.com/linux/ubuntu/gpg" -o docker.key # Step 1: install docker's public key
+  ls -la
+  gpg --dearmor docker.key # text format to binary format so package manager can understand (will create docker.key.gpg)
+  sudo mv docker.key.gpg /etc/apt/keyrings/ # this is where we put all the public key of third party repositories
+
+  sudo vim /etc/apt/sources.list.d/docker.list # Step 2: add the repository to the list
+
+  sudo apt update # Step 3: update the package list
+  ``` 
+  - `docker.list` file
+  ```
+  deb [signed-by=/etc/apt/keyrings/docker.key.gpg] https://download.docker.com/linux/ubuntu noble stable
+  ```
+- ppa (Personal Package Archive): repository maintained by non-official ubuntu developers
+  - Example: latest version graphic driver ppa
+  ```bash
+  sudo add-apt-repository ppa:graphics-drivers/ppa # Step 1: add the repository
+  sudo apt update # Step 2: update the package list
+  add-apt-repository --list # Step 3: list all repositories
+  ```
+
+## Install Software by Compiling Source Code
+- 
+
+## Lab: Manage Software, Repositories & Install Software from Source
+- [Lab: Manage Software, Repositories & Install Software from Source](./labs/manage_software_repositories_install_software_from_source.bash)
