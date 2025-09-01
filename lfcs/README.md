@@ -53,6 +53,8 @@
   - [Configure the Repositories of Package Manager](#configure-the-repositories-of-package-manager)
   - [Install Software by Compiling Source Code](#install-software-by-compiling-source-code)
   - [Lab: Manage Software, Repositories \& Install Software from Source](#lab-manage-software-repositories--install-software-from-source)
+  - [Verify Integrity and Availability of Resources and Processes](#verify-integrity-and-availability-of-resources-and-processes)
+  - [Lab: Verify Integrity and Availability of Resources and Processes](#lab-verify-integrity-and-availability-of-resources-and-processes)
 
 # Introduction
 ## Course Link
@@ -1499,3 +1501,63 @@ echo "The ORIGINAL file2" > file2.txt
 
 ## Lab: Manage Software, Repositories & Install Software from Source
 - [Lab: Manage Software, Repositories & Install Software from Source](./labs/manage_software_repositories_install_software_from_source.bash)
+
+## Verify Integrity and Availability of Resources and Processes
+- `df` (disk free):
+  - `df -h`: human readable format
+  - `df -hT`: human readable format with type of filesystem
+  - `df -hT -x tmpfs`: human readable format with type of filesystem, exclude tmpfs
+    - `tmpfs` is a temporary filesystem that is stored in RAM, not on disk
+  - `df -hT -x tmpfs -x devtmpfs`: human readable format with type of filesystem, exclude tmpfs and devtmpfs
+- `du` (disk usage):
+  - `du -sh <directory>`: summarize disk usage of a directory
+- `free`: show amount of free and used memory
+  - `free -h`: human readable format
+    - Example:
+      - ![free](./resources/screenshots/free_utility_output.png)
+    - Memory shown is `Gi`/`Mi` , which means Gibibyte (1.07374 Gb)/Mebibyte, not Gigabyte/Megabyte
+    - `available` vs `free` column
+      - `available`: memory that is available for starting new applications
+      - `free`: memory that is not being used at all
+      - For example, when we load a 1 GB text file, it is temporarily loaded into the memory. But it will not take a lot of `available` memory, since it can be swapped out to the disk whenever another application need to take up memory space.
+- `vmstat`: report virtual memory statistics
+  - `vmstat -s`: summary of virtual memory statistics
+- `uptime`
+  - example output:
+    - ![uptime](./resources/screenshots/uptime_output.png)
+    - 3 numbers after `load average`:
+      - first number: average load in the past minute
+      - second number: average load in the past 5 minute
+      - third number: average load in the past 15 minute
+    - In terms of percentage, 1.0 means 100% of a CPU is being used. So if we have 4 CPU, 4.0 means all 4 CPU is being used on average.
+- `lscpu`: display information about the CPU architecture
+  - `lscpu | grep -i "model name"`: show the model name of the CPU
+  - `lscpu | grep -i "cpu cores"`: show the number of CPU cores
+  - `lscpu | grep -i "socket(s)"`: show the number of sockets
+- `lspci`: list all PCI devices
+  - `lspci -k`: show kernel driver in use
+  - `lspci -v`: show verbose output (`-vv` for even more verbose)
+  - `lspci -nn`: show numeric ID
+  - `lspci -d <vendor>:<device>`: show specific device
+- Integrity of File Systems
+  - Note: To check file systems for errors, one must **unmount** it
+  - Redhat OS -> xfs file systems (default)
+    - `xfs_repair -v /dev/vdb1`: check and repair XFS file system in `/dev/vdb1`
+  - Ubuntu OS -> ext4 file systems (default)
+    - `sudo fsck.ext4 -v -f -p /dev/vdb2`: check and repair ext4 file system in `/dev/vdb2`
+      - Options:
+        - `-v`: verbose
+        - `-f`: force check
+        - `-p`: automatically repair errors simple problems without prompting any question
+- How to make sure key processes are working in our system ?
+  - `systemctl list-dependencies`:
+    - shows tree like structure of important systemd units that are active/inactive
+      - green dot: active
+      - transparent dot: inactive (not always mean a problem, some service only run on boot is not always needed to be active)
+  - Example case (kills `atd.service` which is one of key services)
+    - ![debugging_key_process](./resources/screenshots/debugging_key_process.png)
+    - use `systemctl status` to check the service status and recent log
+    - user `journalctl -u <service-name>` to check the service log
+
+## Lab: Verify Integrity and Availability of Resources and Processes
+- [Lab: Verify Integrity and Availability of Resources and Processes](./labs/verify_integrity_and_availability_of_resources_and_processes.bash)
