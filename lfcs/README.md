@@ -55,6 +55,7 @@
   - [Lab: Manage Software, Repositories \& Install Software from Source](#lab-manage-software-repositories--install-software-from-source)
   - [Verify Integrity and Availability of Resources and Processes](#verify-integrity-and-availability-of-resources-and-processes)
   - [Lab: Verify Integrity and Availability of Resources and Processes](#lab-verify-integrity-and-availability-of-resources-and-processes)
+  - [Change Kernel Runtime Parameters, Persistent and Non-Persistent](#change-kernel-runtime-parameters-persistent-and-non-persistent)
 
 # Introduction
 ## Course Link
@@ -1561,3 +1562,26 @@ echo "The ORIGINAL file2" > file2.txt
 
 ## Lab: Verify Integrity and Availability of Resources and Processes
 - [Lab: Verify Integrity and Availability of Resources and Processes](./labs/verify_integrity_and_availability_of_resources_and_processes.bash)
+
+## Change Kernel Runtime Parameters, Persistent and Non-Persistent
+- Kernel Runtime Parameter: Settings for how the linux kernel behaves internally
+- `sysctl`: change kernel runtime parameters
+  - `sysctl -a`: list all kernel parameters
+    - prefixes
+      - `net.`: network related parameters
+      - `vm.`: virtual memory related parameters
+      - `fs.`: file system related parameters
+      - `kernel.`: kernel related parameters
+  - `sysctl -n <parameter-name>`: show the value of a parameter
+  - `sysctl -w <parameter-name>=<value>`: change the value of a parameter. **Non-persistent change**
+    - Example: `sysctl -w net.ipv4.ip_forward=1` (turn on IP forwarding)
+- Make the change persistent
+  - we can add a file to /etc/sysctl.d/ directory. File added here must ends with `.conf` 
+  - `man sysctl.d`: will tell us that file name must ends with `.conf`
+  - Example
+    - `sysctl -a | grep vm`: let's check all memory related kernel params
+    - `sudo vim /etc/sysctl.d/swap-less.conf`: make a new file to make change persistent for swap less (default = 60)
+    - add `vm.swappiness=10` to the file
+    - `sudo sysctl -p /etc/sysctl.d/swap-less.conf`: apply the change
+    - `sysctl vm.swappiness`: check the value
+  - Another way to make persistent change is by changing `/etc/sysctl.conf` file. But not recommended since it may be overwritten by updates.
