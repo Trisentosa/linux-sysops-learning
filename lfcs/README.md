@@ -56,6 +56,7 @@
   - [Verify Integrity and Availability of Resources and Processes](#verify-integrity-and-availability-of-resources-and-processes)
   - [Lab: Verify Integrity and Availability of Resources and Processes](#lab-verify-integrity-and-availability-of-resources-and-processes)
   - [Change Kernel Runtime Parameters, Persistent and Non-Persistent](#change-kernel-runtime-parameters-persistent-and-non-persistent)
+  - [List and Identify SELinux File and Process Contexts](#list-and-identify-selinux-file-and-process-contexts)
 
 # Introduction
 ## Course Link
@@ -1585,3 +1586,27 @@ echo "The ORIGINAL file2" > file2.txt
     - `sudo sysctl -p /etc/sysctl.d/swap-less.conf`: apply the change
     - `sysctl vm.swappiness`: check the value
   - Another way to make persistent change is by changing `/etc/sysctl.conf` file. But not recommended since it may be overwritten by updates.
+
+## List and Identify SELinux File and Process Contexts
+- In previous section, we have discussed forms of security in Linux
+  - File and directory permissions (`rwxrwxrwx`)
+  - Root user privilege
+- But, these are not enough to protect our system from sophisticated attacks. need extra modules, here we'll see SELinux
+- SELinux: Security Enhanced Linux, a security module that is built into the Linux kernel. For Redhat OS Family, it is enabled by default, but not for Ubuntu
+  - How it works ? At surface level it decides whether an actions is allowed or not, similar to file permissions, each file is labelled with a context, and each process is also labelled with a context. And SELinux decide whether a process is allowed to access a file based on their context.
+  - The format of context is `<user>:<role>:<type>:<level>` (e.g. `unconfined_u:unconfined_r:unconfined_t:s0`)
+    - user: not same as linux user, rather SELinux user. Each linux user is mapped to a SELinux user as a part of SELinux policy configuration
+    - role: each user has sets of predefined role it can assume (e.g. user of "dev_u", should only be access roles like "dev_r" or "docker_r", but maybe not "sysadmin_r" )
+    - type: if role can be entered, then will check thet type, which have a set of permissions
+    - level: each file and process has a level, and each level has a set of permissions (rarely used unless in high security environment, higher level means require more permissions)
+  - On most cases, we only need to worry about the role and type. user and level is more for advanced use cases
+  - `ls -Z`: list file context
+  - `ps -eZ`/ `ps axZ`: list process context
+  - `id -Z`: list current user context
+  - `sudo semanage login -l`: list all user and their mapped SELinux user
+  - `sudo semanage user -l`: list all SELinux users and their roles they can assume
+  - `getenforce`: checks if SELinux is enabled or disabled
+    - "Enforcing" means SELinux is enabled and actively enforcing the policy
+    - "Permissive" means SELinux is enabled but not actively enforcing the policy (only log the violation)
+    - "Disabled" means SELinux is disabled
+
