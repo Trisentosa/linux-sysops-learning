@@ -57,6 +57,8 @@
   - [Lab: Verify Integrity and Availability of Resources and Processes](#lab-verify-integrity-and-availability-of-resources-and-processes)
   - [Change Kernel Runtime Parameters, Persistent and Non-Persistent](#change-kernel-runtime-parameters-persistent-and-non-persistent)
   - [List and Identify SELinux File and Process Contexts](#list-and-identify-selinux-file-and-process-contexts)
+  - [Create and Enforce MAC Using SELinux](#create-and-enforce-mac-using-selinux)
+  - [Lab: Kernel Runtime Parameters and SELinux](#lab-kernel-runtime-parameters-and-selinux)
 
 # Introduction
 ## Course Link
@@ -1610,3 +1612,150 @@ echo "The ORIGINAL file2" > file2.txt
     - "Permissive" means SELinux is enabled but not actively enforcing the policy (only log the violation)
     - "Disabled" means SELinux is disabled
 
+## Create and Enforce MAC Using SELinux
+- Mandatory Access Control (MAC)
+- Background: In Redhat or CentOS, SELinux is enabled by default. But in Ubuntu, the security module used by default is AppArmor
+- To setup SELinux in Ubuntu
+  - Step 1: disable AppArmor
+  ```bash
+  sudo systemctl status apparmor.service 
+  sudo systemctl stop apparmor.service
+  sudo systemctl disable apparmor.service
+  ```
+  - Step 2: Install SELinux
+    - auditd: audit daemon
+  ```bash
+  # selinux-basics: pull all selinux utilities we need
+  # auditd: audit daemon utility to log certain system events, and later will be used to further configure SELinux Policy customised on our system
+  sudo apt install selinux-basics auditd
+
+  sestatus # check status of SELinux, disabled by default after installed
+  ```
+  - Step 3: Enable SELinux
+    - prereqs:
+      - bootloader must be configured to tell the lnux kernel to load the security module
+      - every file in the filesystem need be properly labelled
+    ```bash
+    ls -Z # initial ls -Z, everythin question marks
+    sudo selinux-activate # utility to activate SELinux in our system (the prereqs)
+
+    cat /etc/default/grub # saw have a line GRUB_CMDLINE_LINUX=" security=selinux"
+
+    ls -a / # we found a file called .autorelabel, this will instruct SELinux to relabels the file system when we reboot
+    reboot # reboot and relables will executed
+
+    ls -Z # now all files should be labelled !
+    sestatus # status will now be enabled
+    ```
+    - References
+      - When sestatus is enabled
+      ![enabled_sestatus](./resources/screenshots/enabled_sestatus.png) 
+        - Note that there are two types of SELinux mode
+          - Permissive: Passively monitor actions, not disallowing any action. But only logging it (think of it as learning mode)
+          - Enforcing: Actively monitor actions, and disallowing any action that is not allowed
+        - You can also check this mode from the command `getenforce`
+  - Step 4: Creating security policy based on our system configuration
+    - First we need to observe the logs 
+        ```bash
+        sudo audit2why --all | less
+        ```  
+        - `avc`: Access Vector Cache, 
+        - Example: search for `ssh`, with our configuration, if we putenforce mode, we shouldn't even be able to ssh to our machine
+        - ![audit2why_output](./resources/screenshots/audit2why_output.png)
+          - You can see "avc: denied", which means under normal condition, this action will not be allowed by current security policy
+        - In the log, the cause is mentioned "Missing type enforcement(TE) allow rule"
+          - Please note the SELinux type is "sshd_t", which don't have the permission
+          - And it suggest to use `audit2allow` to generate module to allow this access for "sshd_t"
+          - so what process even is "sshd_t" ?
+            - we can check it by using `ps -eZ` then pipe it with grep. In this case `ps -eZ | grep sshd_t`  
+            - we found that the process is `sshd` (OpenSSH Daemon)
+            - OK, now we check the binary file by doing `ls -Z /usr/sbin/sshd`
+            - hold on, the type here is "sshd_exec_t", not "sshd_t". What is going on ?
+            - ![sshd_exec_t](./resources/screenshots/sshd_exec_t.png)
+            - Basically
+              - `*_exec_t*`: files with label "*_exec_t" are entry points for domains (process types). And based on the process runs, it will transition to the domain type. In this case, when `sshd` is executed, it will transition to `sshd_t` domain.
+              - `sshd_exec_t`: controlled as "entry points". Only certain domains are allowed to execute them 
+              - `sshd_t`: controlled for runtime behavior. Policies define what "sshd_t" can access
+    - Second, after we verify the log, we can use `audit2allow` to generate module to allow this custom access
+      ```bash
+      # generate a module called "mymodule" that allow access to all events up to this point of creation 
+      sudo audit2allow --all -M mymodule
+
+      sudo semodule -i mymodule.pp # execute this rule
+
+      ls # see that the file mymodule.pp and mymodule.te
+      less mymodule.te # can check the enforcement rule in the .te file
+      ``` 
+      - Analysing enforcment rule, let's check one line for the sshd_t process
+        - `allow sshd_t var_log_t:file { append create getattr ioctl open };`; What this mean:
+          - `allow`: allow the access
+          - `sshd_t`: the source domain (process type)
+          - `var_log_t`: the target domain (file type)
+          - `file`: the object class (in this case is file)
+          - `{ append create getattr ioctl open }`: the permissions allowed
+            - `append`: append to the file
+            - `create`: create the file
+            - `getattr`: get file attributes
+            - `ioctl`: perform I/O control operations on the file
+            - `open`: open the file
+    - Third, set the mode to enforcing
+    ```bash
+    sudo setenforce 1
+    getenforce # verify the mode
+
+    # but the change above is not persistent, to make a persistent change, do:
+
+    sudo vim /etc/selinux/config
+    # change SELINUX=permissive to SELINUX=enforcing
+    sudo reboot
+    ``` 
+  - Changing SELinux context
+    - `chcon`: change context
+    - `chcon -t <new_type> <target_file/target_directory>`: change the context of target_file/target_directory to new_type
+    - `chcon -u <new_user> <target_file/target_directory>`: change the context of target_file/target_directory to new_user
+    - `chcon -r <new_role> <target_file/target_directory>`: change the context of target_file/target_directory to new_role
+    - `chcon --reference <reference_file> <target_file/target_directory>`: change the context of target_file/target_directory to the context of reference_file
+    - `chcon -R -t <new_type> <target_directory>`: change the context of target_directory and all its contents to new_type
+    - `restorecon`: restore the context of a file to the default context
+  - Available labels command
+    - `seinfo -u/r/t`: list all available users/roles/types
+    - `seinfo -t -x`: list all available types with their permissions
+  - What happened when new files are created
+  ```bash
+  sudo mkdir /var/www
+  sudo touch /var/www/{1..10}
+  ls -Z /var/www # all files have the same context as the parent directory, which is unconfined_u:object_r:var_t:s0
+
+  # this is where restorecon comes in, it acts as a database of common context for files and directories
+  # and will restore the context of a file to the default context
+  sudo restorecon -R /var/www
+
+  # see ls -Z output is now like unconfined_u:object_r:httpd_sys_content_t:s0 , which makes much more sense than a generic var_t label
+
+  # But it only restores the type label, not user, or role. If we want to force other label, can use restorecon using -F option
+  sudo restorecon -F -R /var/www
+
+  # see ls-Z output is now like system_u:object_r:httpd_sys_content_t:s0
+  ``` 
+    - restorecon is not persistent, especially update may override the labels, to create a persistent change, need to do `semanage`
+    ```bash
+    sudo semanage fcontext --add --type var_log_t /var/www/10 # add a new context for /var/www/10 to be var_log_t
+    sudo restorecon -R /var/www/10 # restore the context
+    ls -Z /var/www/10 # see the context is now var_log_t
+
+    # recursive add
+    sudo semanage fcontext --add --type var_log_t "/var/www(/.*)?" # add a new context for all files in /var/www to be var_log_t
+    sudo restorecon -R /var/www # restore the context
+
+    # boolean: like a switch to turn on/off a certain policy
+    sudo semanage boolean -l # list all boolean (off, off). the first off is the current mode, the second off is the default state of this rule
+    sudo semanage boolean -m --on httpd_can_network_connect # turn on boolean httpd_can_network_connect
+    getsebool httpd_can_network_connect # check the status of the boolean
+
+    # port
+    sudo semanage port -l # list all port
+    sudo semanage port -a -t http_port_t -p tcp 8080 # add a new port 8080 for http
+    sudo semanage port -d -t http_port_t -p tcp 8080 # delete the port 8080 for http
+    ``` 
+## Lab: Kernel Runtime Parameters and SELinux
+- [Lab: Kernel Runtime Parameters and SELinux](./labs/kernel_runtime_parameters_and_selinux.bash)
