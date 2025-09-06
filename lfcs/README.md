@@ -59,6 +59,8 @@
   - [List and Identify SELinux File and Process Contexts](#list-and-identify-selinux-file-and-process-contexts)
   - [Create and Enforce MAC Using SELinux](#create-and-enforce-mac-using-selinux)
   - [Lab: Kernel Runtime Parameters and SELinux](#lab-kernel-runtime-parameters-and-selinux)
+  - [Create and Manage Containers](#create-and-manage-containers)
+  - [Manage and Configure Virtual Machines](#manage-and-configure-virtual-machines)
 
 # Introduction
 ## Course Link
@@ -1759,3 +1761,108 @@ echo "The ORIGINAL file2" > file2.txt
     ``` 
 ## Lab: Kernel Runtime Parameters and SELinux
 - [Lab: Kernel Runtime Parameters and SELinux](./labs/kernel_runtime_parameters_and_selinux.bash)
+
+## Create and Manage Containers
+- Install Docker on Ubuntu: https://docs.docker.com/engine/install/ubuntu/ 
+  - Note that when following the tutorial above, docker by default will be installed for root user only. To install for current user, do:
+  ```bash
+  sudo usermod -aG docker $USER # add user to the docker group
+  newgrp docker # apply the group change
+  ```
+- Basic Utility
+```bash
+docker search <image-name> # search for image
+docker pull <image-name> # pull image
+docker images # list all images
+docker run <image-name> # run image
+docker ps # list all running containers
+docker ps -a # list all containers
+docker stop <container-id> # stop container
+docker rm <container-id> # remove container
+docker rmi <image-name> # remove image
+man docker <command> # check docker command documentation
+```
+- Example: setup simple nginx web server container
+```bash
+docker search nginx # search for nginx image
+docker pull nginx # pull nginx image, by default will pull the latest tag version
+docker pull nginx:1.25.3 # pull specific version
+docker rmi nginx:1.25.3 # remove image with specific version
+
+docker images # verify and list all images again
+
+docker run nginx # run nginx image, by default will run in foreground mode. but once exited, container will be stopped
+docker run -d -p 8080:80 --name mywebserver nginx # run nginx image in detached mode (-d/--detach) and -p/--port to map port 8080 to 80 (computer port:container port) with name mywebserver
+docker ps -a # verify and list all containers again, can see the old container is exited (but not removed), and the new container is running
+docker start nervous-man # start the old exited container again (to try)
+
+nc localhost 8080 # check if port 8080 is listening using netcat (nc)
+# INSIDE nc, we can try `GET /` (you'll see the nginx welcome HTML page)
+
+docker ps # list all running containers
+docker stop <container-id> # stop container
+docker rm <container-id> # remove container
+
+docker rmi nginx # remove image (remember remove all containers using the image first)
+
+man docker run # open run command documentation, there is an option we can try. In man, search for "restart policy", we want to set it to always
+
+docker run -d -p 8080:80 --name mywebserver --restart always nginx # run nginx image in detached mode (-d/--detach) and -p/--port to map port 8080 to 80 (computer port:container port) with name mywebserver and restart policy to always
+
+docker stop <container-id> # stop container
+```
+
+- Create your own image
+  - Dockerfile reference: https://docs.docker.com/reference/dockerfile/. Some useful Instructions are:
+    - `FROM`: base image
+    - `COPY`: copy files from host to container
+    - `EXPOSE`: port to expose
+    - `CMD`: command to run when container starts (**runtime**)
+    - `RUN`: tell docker to run command at **build time** when creating the image
+    - `ENTRYPOINT`: defines the main executable of the container (**runtime**)
+    - `ENV`: set environment variable
+    - `WORKDIR`: set working directory
+```bash
+mkdir myimage && cd myimage
+vim index.html # fill whatever you want 
+
+vim Dockerfile
+docker build -t tri/customnginximage:1.0 . # create image from Dockerfile, -t to tag the image, . to specify the current directory
+man docker build # can always refer to bulld man page, they also have helpful examles there 
+docker run -d -p 8080:80 --name mywebserver --restart always tri/customnginximage:1.0
+```
+
+```dockerfile
+FROM nginx
+COPY index.html /usr/share/nginx/html/index.html # https://hub.docker.com/_/nginx to see why we use this specific directory
+```
+
+## Manage and Configure Virtual Machines
+- In Linux, the most popular stack for getting start with VM is QEMU - KVM
+- ![qemu_kvm](./resources/screenshots/qemu_kvm.png)
+- And we'll be focusing on tool called `VIRSH`, which is a tool to manage virtual machines from the command line 
+- Let's get started
+```bash
+# step 1, install virt-manager
+sudo apt install virt-manager
+
+# step 2: create xml definition file
+vim testmachine.xml
+
+# step 3: pass definition file to virsh 
+virsh define testmachine.xml
+virsh help # see all available commands
+
+```
+```xml
+<domain type='qemu'>
+  <name>testmachine</name>
+  <memory unit='GiB'>1</memory>
+  <vcpu>1</vcpu>
+  <os>
+    <type arch='x86_64'>hvm</type>
+  </os>
+  <devices>
+    <disk type='file' device='disk'>
+      <source file='/var/lib/libvirt/images/testmachine.qcow2'/>
+```
