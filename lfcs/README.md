@@ -63,6 +63,7 @@
   - [Manage and Configure Virtual Machines](#manage-and-configure-virtual-machines)
   - [Create and Boot a Virtual Machine](#create-and-boot-a-virtual-machine)
   - [Installing an Operating System on a virtual machine](#installing-an-operating-system-on-a-virtual-machine)
+  - [Lab: Manage Containers and VM](#lab-manage-containers-and-vm)
 
 # Introduction
 ## Course Link
@@ -1994,3 +1995,6 @@ virt-install \
   --location https://deb.debian.org/debian/dists/bookworm/main/installer-amd64/ \
   --graphics none \ 
   ```
+
+## Lab: Manage Containers and VM
+- [Lab: Manage Containers and VM](./labs/manage_containers_and_vm.bash)
