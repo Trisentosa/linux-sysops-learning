@@ -64,6 +64,10 @@
   - [Create and Boot a Virtual Machine](#create-and-boot-a-virtual-machine)
   - [Installing an Operating System on a virtual machine](#installing-an-operating-system-on-a-virtual-machine)
   - [Lab: Manage Containers and VM](#lab-manage-containers-and-vm)
+- [Users and Groups](#users-and-groups)
+  - [Create, Delete, and Modify Local User Accounts](#create-delete-and-modify-local-user-accounts)
+  - [Create, Delete, and Modify Local Groups and Group Memberships](#create-delete-and-modify-local-groups-and-group-memberships)
+  - [Lab: Manage User Accounts and Groups](#lab-manage-user-accounts-and-groups)
 
 # Introduction
 ## Course Link
@@ -1998,3 +2002,127 @@ virt-install \
 
 ## Lab: Manage Containers and VM
 - [Lab: Manage Containers and VM](./labs/manage_containers_and_vm.bash)
+
+# Users and Groups
+
+## Create, Delete, and Modify Local User Accounts
+- To create a new user
+  ```bash
+  sudo adduser <username>
+  ```
+  - What happened when you create a new user ?
+    - A new user is created with a home directory at `/home/<username>`
+    - A new group is created with the same name as the user
+    - The user is added to the group
+    - `/bin/bash` is set as the default shell for the user (his entire login session will run inside this app)
+    - all files from `/etc/skel` is copied to the user's home directory (e.g. `.bashrc`, `.profile`, etc). Which contains basic configuration for the user's shell
+    - The user is added to the `sudo` group (if you want to give the user sudo permission)
+    - The user is added to the `adm` group (if you want to give the user access to system logs)
+- To change password of a user
+  ```bash
+  sudo passwd <username>
+
+  sudo adduser --shell /bin/othershell --home /home/otherdirectory/ <username>  # create user with different shell and home directory
+  ``` 
+- To remove or delete a user
+  ```bash
+  sudo deluser <username> # only delete the user account (group may got auto-removed if there is no other user in the group). But the home directory is still there
+  sudo deluser --remove-home <username> # delete the user account and the home directory (if we certain that the files inside no more needed)
+  ```   
+- account information detail is stored in `/etc/passwd` file
+  - `cat /etc/passwd` 
+  - Example output: 
+    - `lfcs:x:1000:1000:lfcs:/home/lfcs:/bin/bash`
+    - Explanation (left to right)
+      - `lfcs`: username
+      - `x`: password is stored in `/etc/shadow` file
+      - `1000`: user ID (starts with 1000, and increment by 1 by each user added. for custom uid `sudo adduser --uid <uid> <username>`)
+      - `1000`: group ID
+      - `lfcs`: comment (usually full name)
+      - `/home/lfcs`: home directory
+      - `/bin/bash`: default shell
+  - group information detail is stored in `/etc/group` file
+- To get user information
+  ```bash
+  id # get current user id, group id, etc
+  id <username> # get user id, group id, etc
+
+  whoami # get current username
+  users # get all logged in users
+  ```
+- Creating system account
+  - Sometimes, we need to create an account for a service or a program to run as. For example, we want to run a web server as a non-root user. In this case, we can create a system account. Many daemon actually run as system account
+  ```bash
+  sudo adduser --system --no-create-home <username> # create system account
+  ``` 
+- Modify user account (`usermod`)
+  ```bash
+  sudo usermod -aG <group> <username> # add user to group
+  sudo usermod -g <group> <username> # change user's primary group
+  sudo usermod -l <new-username> <old-username> # change username
+
+  sudo usermod --home /home/otherdirectory --move-home <username> # change home directory and move files to new directory, or alternatively
+  sudo usermod -d /home/newhome -m <username> # change home directory (same as above)
+
+  sudo usermod -s /bin/bash <username> # change default shell
+  sudo usermod --local <username> # lock user account (disable the accoutn without deleting it). They not able to log in using password, but still able using ssh key if have previously setup
+  sudo usermod --unlock <username> # unlock user account
+  sudo usermod --expiredate 2021-01-01 <username> # or -e. set account expiration date (format YEAR-MONTH-DAY). use empty quotes "" to remove expiration date.If you use date in the past, account will get expired
+
+  sudo chage --lastday 0 <username> # whenver user login, they need to set new password, use -1 to remove this requirement
+  sudo chage --maxdays 30 <username> # it means password will expire every 30 days
+  sudo chage --maxdays -1 <username> # remove password expiration
+  sudo chage --list <username> # list all password policy for the user
+  ```
+
+## Create, Delete, and Modify Local Groups and Group Memberships
+- each user can belong to one or more groups
+- Example use case:
+  - In a software development scenario, multiple developers may be working in a shared directory (e.g. `/var/www/html`). In this case, we can create a group called `developers` and add all developers to this group. Then we can set the permission of the shared directory to `775` (owner and group can read, write, and execute, others can read and execute). This way, all developers can access the shared directory, and any change of policy for `developers` we want, we can just apply to the group instead having to change each user's permission individually.
+- To create a new group
+  ```bash
+  sudo addgroup <groupname>
+  ```
+- To delete a group
+  ```bash
+  sudo groupdel <groupname> # will not work, if there is still belongs to at least one of user's primary group
+  ```
+- To get group information
+  ```bash
+  id <username> # get group information for a user
+  groups <username> # get group information for a user
+  getent group <groupname> # get group information for a group
+  ```
+  - `groups <username>` output example:
+    - john : john users developers
+    - Explain:
+      - `john` is the primary group (or also called `login` group). This is the group that the user will belong to when he/she logs in
+      - `users` and `developers`: is the secondary group. This is the group that the user can assume when he/she runs a program
+- Although user can belong to many group, they can only have 1 `primary` group (or also called `login` group). Once user logs in, this becomes his/her primary group
+  - For example, when user runs a program. It will run under his/her primary group. Any file created by the program will also by default belong to this group.
+  - Another example, when user creates a new file, it will by default belong to his/her primary group.
+  - Exercise:
+  ```bash
+  sudo adduser john # create user john
+  sudo groupadd developers # create developer group
+
+  sudo gpasswd --add john developers # add john to developer grup
+  sudo gpasswd --a john developers # same as above
+
+  groups john # output: "john : john users developers". In this case
+
+  gpasswd --delete john developers # remove john from developer group
+  gpasswd -d john developers # same as above
+
+  groups john # output: "john : john users"
+
+  sudo usermod -g developers john # change the primary group (safe to use --gid, since sometimes user confused with -G which updates the secondary group, not the primary one)
+  ``` 
+  - Note the difference in order between `gpasswd` and `usermod -g`. In `gpasswd`, pass in the username first, then the group name. In `usermod -g`, pass in the group name first, then the username
+- Modify group info
+- ```bash
+  sudo groupmod -n <new-groupname> <old-groupname> # change group name
+  ```
+
+## Lab: Manage User Accounts and Groups
+- [Lab: Manage User Accounts and Groups](./labs/manage_user_accounts_and_groups.bash)
