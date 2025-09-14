@@ -62,6 +62,7 @@
   - [Create and Manage Containers](#create-and-manage-containers)
   - [Manage and Configure Virtual Machines](#manage-and-configure-virtual-machines)
   - [Create and Boot a Virtual Machine](#create-and-boot-a-virtual-machine)
+  - [Installing an Operating System on a virtual machine](#installing-an-operating-system-on-a-virtual-machine)
 
 # Introduction
 ## Course Link
@@ -1962,3 +1963,34 @@ virt-install \
 --graphics none \
 --import
 ```
+
+## Installing an Operating System on a virtual machine
+- Previously, we install cloud images with pre-installed operating systems
+- Now, we will install operating system from scratch
+- we modify the `virt-install` command a bit differently. This assuming we have the iso file downloaded
+  ```bash
+  virt-install \
+  --osinfo debian12 \
+  --name debian1 \
+  --memory 1024 \
+  --vcpus 1 \
+  --disk size=10 \
+  --location /var/lib/libvirt/boot/debian12-netinst.iso \
+  --graphics none \ 
+  --extra-args "console=ttyS0"
+  ```
+  Explain: 
+  - `--import` is not used because we are not importing an existing image
+  - `--location`: specify the location of the installation media (iso file)
+  - `--extra-args "console=ttyS0"`: specify the console to use for the installation. `ttyS0` is the first serial console. This is useful when we want to install the OS without GUI (e.g. in cloud environment)
+- In case where ISO file is not downloaded in our system, we can specify the url
+  ```bash
+  virt-install \
+  --osinfo debian12 \
+  --name debian1 \
+  --memory 1024 \
+  --vcpus 1 \
+  --disk size=10 \
+  --location https://deb.debian.org/debian/dists/bookworm/main/installer-amd64/ \
+  --graphics none \ 
+  ```
