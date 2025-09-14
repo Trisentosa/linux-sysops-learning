@@ -61,6 +61,7 @@
   - [Lab: Kernel Runtime Parameters and SELinux](#lab-kernel-runtime-parameters-and-selinux)
   - [Create and Manage Containers](#create-and-manage-containers)
   - [Manage and Configure Virtual Machines](#manage-and-configure-virtual-machines)
+  - [Create and Boot a Virtual Machine](#create-and-boot-a-virtual-machine)
 
 # Introduction
 ## Course Link
@@ -1851,12 +1852,42 @@ vim testmachine.xml
 
 # step 3: pass definition file to virsh 
 virsh define testmachine.xml
-virsh help # see all available commands
+virsh help # see all available commands, can check domain management (domain just mean VM in this context)
 
+virsh list # only shows active VMs
+virsh list --all # shows all VMs (by default, when we define a VM, it is not active)
+
+# step 4: start the VM
+virsh start TestMachine
+virsh reboot TestMachine # reboot VM (gracefully shutdown and start again)
+virsh reset TestMachine # reset VM (like pressing the reset button physically)
+virsh shutdown TestMachine # send shutdown signal inside VM, so will gracefully shutdown VM
+virsh destroy TestMachine # name a bit misleading, we're not destroying/deleting the VM, just stop VM
+virsh undefine TestMachine # delete VM, but not delete the data, such as its virtual disk
+
+# step 5: delete VM and its data
+virsh help undefine
+virsh undefine --remove-all-storage TestMachine  # delete VM and its data
+
+# autostart
+virsh autostart TestMachine # set VM to autostart
+virsh autostart --disable TestMachine # disable autostart
+
+# check vm info
+virsh dominfo TestMachine # e.g. contains uuid, os, specs
+virsh setvcpus TestMachine 2 --config # set number of vcpus to 2, to see list of available options to set, can do `virsh set` followed by <tab button>. Oops seem got blocked because the default maximum set is 1 vcpu
+virsh setvcpus TestMachine 2 --config --maximum # set the maximum number of vcpus to 2
+virsh setvcpus TestMachine 2 --config
+# to apply change
+virsh destroy TestMachine
+virsh start TestMachine
+virsh dominfo TestMachine
+
+# note VM lifecycle in nutshell: define -> start -> ?(reset|reboot) -> shutdown -> destroy -> undefine
 ```
 ```xml
 <domain type='qemu'>
-  <name>testmachine</name>
+  <name>TestMachine</name>
   <memory unit='GiB'>1</memory>
   <vcpu>1</vcpu>
   <os>
@@ -1865,4 +1896,69 @@ virsh help # see all available commands
   <devices>
     <disk type='file' device='disk'>
       <source file='/var/lib/libvirt/images/testmachine.qcow2'/>
+```
+
+## Create and Boot a Virtual Machine
+- More complete virtual machine example use case
+- Step 1: Install an ubuntu image:
+  ```bash
+  wget https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img
+  ``` 
+- Step 2: Get image information
+  ```bash
+  qemu-img info ubuntu-24.04-minimal-cloudimg-amd64.img # information such as file format, virutal size, disk size, cluster size, etc
+  ```
+- Step 3: expand virtual disk
+```bash
+qemu-img resize ubuntu-24.04-minimal-cloudimg-amd64.img 10G # expand to 10GB, use +10G to add 10GB to current size instead
+qemu-img info ubuntu-24.04-minimal-cloudimg-amd64.img # check the new size
+
+ls /var/lib/libvirt/images/ # check the location virtual machine images are stored
+sudo cp ubuntu-24.04-minimal-cloudimg-amd64.img /var/lib/libvirt/images/ubuntu-24.04-minimal-cloudimg-amd64.img # copy the image to the location
+```
+- Step 4: use virt-install to create VM
+```bash
+virt-install --osinfo list # list the available os variant
+man virt-install # check the documentation. note the --import option. Which overrides default virt-install behavior to do the OS intallation process. Since we already have the image, we don't need to do the installation process. Thus we can use --import to skip the installation process and --disk to specify the image file
+
+virt-install \
+--name ubuntu1 \
+--vcpus 2 \
+--memory 2048 \
+--disk /var/lib/libvirt/images/ubuntu-24.04-minimal-cloudimg-amd64.img \
+--osinfo ubuntu24.04 \
+--graphics none \
+--import
+
+# use ctrl + ] to exit after installation
+```
+- Step 5: use `libguestfs-tools` to configure the VM root password
+```bash
+virsh shutdown ubuntu1
+
+sudo apt install libguestfs-tools
+sudo virt-customize -a /var/lib/libvirt/images/ubuntu-24.04-minimal-cloudimg-amd64.img --root-password password:password123
+
+virsh start ubuntu1
+```
+- Step 6: login to VM
+```bash
+virsh console ubuntu1 # login using new password
+logout
+```
+- Step 7: use `libosinfo-bin` to see or modify what os vairant available in virt-install
+```bash
+sudo apt install libosinfo-bin
+osinfo-query os # see all available os variant
+osinfo-query os | grep "ubuntu" # see all available ubuntu variant
+
+# or can use detect=on to automatically detect the os variant
+virt-install \
+--name ubuntu1 \
+--vcpus 2 \
+--memory 2048 \
+--disk /var/lib/libvirt/images/ubuntu-24.04-minimal-cloudimg-amd64.img \
+--osinfo detect=on \
+--graphics none \
+--import
 ```
