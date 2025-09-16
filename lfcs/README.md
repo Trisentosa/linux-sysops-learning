@@ -67,7 +67,8 @@
 - [Users and Groups](#users-and-groups)
   - [Create, Delete, and Modify Local User Accounts](#create-delete-and-modify-local-user-accounts)
   - [Create, Delete, and Modify Local Groups and Group Memberships](#create-delete-and-modify-local-groups-and-group-memberships)
-  - [Lab: Manage User Accounts and Groups](#lab-manage-user-accounts-and-groups)
+  - [Manage Template User Environment](#manage-template-user-environment)
+  - [Lab: Manage System-Wide Environment Profiles and Template User Environment](#lab-manage-system-wide-environment-profiles-and-template-user-environment)
 
 # Introduction
 ## Course Link
@@ -2126,3 +2127,32 @@ virt-install \
 
 ## Lab: Manage User Accounts and Groups
 - [Lab: Manage User Accounts and Groups](./labs/manage_user_accounts_and_groups.bash)
+
+## Manage System-Wide Environment Profiles
+- What is environment ?
+  - For starter, you can see the environment variables by running
+  ```bash
+  printenv # or `env`
+  env | grep -i "shell" # e.g. SHELL=/bin/bash
+
+  echo $SHELL # print the env variable, so same as echo "/bin/bash"
+  ``` 
+  - What are these variables used for ?
+    - Sometimes, we want to set a variable that can be accessed by all programs. For example, we want to set a variable that contains the path to a program that we want to use. We can set the variable in the environment, so that all programs can access it.
+    - Some setting like `HISTSIZE`, `HISTFILESIZE`, `HISTCONTROL` is also environment variable used by bash shell to configure command history settings
+- User environment profiles, you can configure in this file (for bash shell)
+  - `~/.bashrc`: for interactive, login shell (e.g. shell that runs when we login to the system)
+- System-wide environment profiles
+  - `/etc/environment`: you can modify this file to set environment variables for all users. This file is read by all shells, both login and non-login, interactive and non-interactive
+  - `/etc/profile.d/<filename>.sh`: you can create a new file inside this directory to set environment variables for all users. This file is read by all shells, both login and non-login, interactive and non-interactive. Example:
+    - ![last_login_system_env](./resources/screenshots/last_login_system_env.png)
+    - Please note that unlike regular shell script. we don't need shebang (like `#! /bin/bash`) in this file, since file under `/etc/profile.d/` is assumed to be bash script
+
+## Manage Template User Environment
+- As mentioned previously, all files from `/etc/skel` is copied to the user's home directory when a new user is created. This includes files like `.bashrc`, `.profile`, etc. We can modify these files to set default environment for new user.
+- For example:
+  - let say we want to inform a default policy for all new user. We can create a file called `policy.txt` inside `/etc/skel` directory. Then all new user will have this file in their home directory.
+  - ![template_env](./resources/screenshots/template_env.png)
+
+## Lab: Manage System-Wide Environment Profiles and Template User Environment
+- [Lab: Manage System-Wide Environment Profiles and Template User Environment](./labs/manage_system_wide_env_profile_and_template_user_env.bash)
