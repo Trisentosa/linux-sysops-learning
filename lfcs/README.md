@@ -69,6 +69,9 @@
   - [Create, Delete, and Modify Local Groups and Group Memberships](#create-delete-and-modify-local-groups-and-group-memberships)
   - [Manage Template User Environment](#manage-template-user-environment)
   - [Lab: Manage System-Wide Environment Profiles and Template User Environment](#lab-manage-system-wide-environment-profiles-and-template-user-environment)
+  - [Configure User Resource Limits](#configure-user-resource-limits)
+  - [Manage User Privileges](#manage-user-privileges)
+  - [Lab: Configure User Resource Limits and User Privileges](#lab-configure-user-resource-limits-and-user-privileges)
 
 # Introduction
 ## Course Link
@@ -2156,3 +2159,45 @@ virt-install \
 
 ## Lab: Manage System-Wide Environment Profiles and Template User Environment
 - [Lab: Manage System-Wide Environment Profiles and Template User Environment](./labs/manage_system_wide_env_profile_and_template_user_env.bash)
+
+## Configure User Resource Limits
+- To give user(s) limits on resources, we can define it in file `/etc/security/limits.conf`
+- Syntax:
+  - `<domain> <type> <item> <value>`
+  - `<domain>`: can be username, group name (using `@groupname`), or wildcard `*` (for all users)
+  - `<type>`: `hard` or `soft`. `hard` is enforced limit, `soft` is warning limit, and also will be set initially when user logs in. Also, have the `-` limit (which signifies both `hard` and `soft`)
+  - `<item>`: resource to be limited. e.g. `nofile` (max number of open files), `nproc` (max number of processes), `rss` (max resident set size), `fsize` (max file size), `cpu` (max CPU time), etc. (can check `man limits.conf` for available items)
+  - `<value>`: value of the limit
+- Example:
+  - ![etc_security_limits](./resources/screenshots/etc_security_limits_conf.png)
+  - individual user limits takes precendence over group limits, which takes precendence over wildcard limits
+  
+## Manage User Privileges
+- Firstly, How do we allow user to access `sudo` command ?
+  - ![sudo_privilege](./resources/screenshots/sudo_privilege.png)
+  - User needs to be belong to `sudo` group to be able to use `sudo` command. To add a user to `sudo` group, we can use `usermod` or `gpasswd` command
+  ```bash
+  sudo usermod -aG sudo <username> # add user to sudo group
+  # or
+  sudo gpasswd --add <username> sudo # add user to sudo group
+  ``` 
+  - Another way, is from the configuratio in `/etc/sudoers` file. However, we should not modify this file directly. We need to use `visudo` command to modify this file. `visudo` will check for syntax error before saving the file.
+  ```bash
+  sudo visudo 
+  ``` 
+  - Syntax for `/etc/sudoers` file (5 parts)
+    - e.g. `%admin ALL=(ALL:ALL) ALL`
+    - Explain:
+      - `%admin`: Who this policy is for. Can be user or group name. `%` means group, ` ` means user
+      - `ALL`: This is the host. what hosts can the user run the command on. `ALL` means all hosts
+      - `(ALL:ALL)`: what users can the user impersonate. the first `ALL` means all users, the second `ALL` means all groups. Doing `(ALL)` means all users and groups
+      - `ALL`: what commands can the user run. `ALL` means all commands
+  - Examples:
+  ```bash
+  trinity ALL=(aaron,john) ALL # trinity can run all commands as aaron and john
+  trinity ALL=(ALL) NOPASSWD: ALL # trinity can run all commands as all users without password
+  trinity ALL=(ALL) NOPASSWD: /usr/bin/apt* # trinity can run all apt command as all users without password
+  ``` 
+
+## Lab: Configure User Resource Limits and User Privileges
+[lab_user_resource_limits_and_privileges](./labs/lab_user_resource_limits_and_privileges.bash)
