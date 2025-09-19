@@ -72,6 +72,8 @@
   - [Configure User Resource Limits](#configure-user-resource-limits)
   - [Manage User Privileges](#manage-user-privileges)
   - [Lab: Configure User Resource Limits and User Privileges](#lab-configure-user-resource-limits-and-user-privileges)
+  - [Manage Access to Root Account](#manage-access-to-root-account)
+  - [Configure the System to use LDAP User and Group Accounts](#configure-the-system-to-use-ldap-user-and-group-accounts)
 
 # Introduction
 ## Course Link
@@ -2201,3 +2203,67 @@ virt-install \
 
 ## Lab: Configure User Resource Limits and User Privileges
 [lab_user_resource_limits_and_privileges](./labs/lab_user_resource_limits_and_privileges.bash)
+
+## Manage Access to Root Account
+- Previously we allow temporary permission for user to be root, but how do we login as the root user ?
+  - `sudo --login` or `sudo -i` for user that belong to `sudo` group
+  - `logout` to exit root session
+  - `su -` for user that don't have `sudo` privileges, but knows root password. The password entered is root password, not the user's password
+- Password access
+  - `sudo passwd root`: set password for root user
+  - `sudo passwd --unlock root` == `sudo passwd -u root` : unlock root account (don't mean that we can't login as root, it means that we can login as root only using password) 
+  - `sudo passwd -l root` : or `--lock`, lock root account
+
+## Configure the System to use LDAP User and Group Accounts
+- Linux keeps information about user accounts and groups locally
+  - For example, user accounts stored in `etc/passwd`
+  - This is okay, but may raise scalability issue as in large scale system managing lots of servers
+  - Solution: use LDAP (Lightweight Directory Access Protocol) server to store user accounts and groups in a central location
+  - **Note**: most of the time in real scenario, we will not be managing the LDAP server itself, we just need to setup linux servers (clients) to user the LDAP server
+- How LDAP works ?
+  - LDAP works as a client-server protocol for querying and modifying a network directory, typically organized in a hierarchical tree structure, to find and manage user, group, and resource information. A client connects to an LDAP server, binds with a username and password to authenticate, then performs directory operations like searching for data or modifying entries. The LDAP server validates credentials and permissions, then returns results to the client. 
+- Setup Pre-configured LDAP server:
+  - we will use pre-configured LDAP configuration, via `lxc` (linux containers). Sort of like docker, but for an entire operating system instead of just a single application
+  - First, we need to initialize `lxd` which is a hypervisor that will monitor `lxc` containers
+    ```bash
+    lxd init
+    ``` 
+  - Next, (assuming we have the archived file of LDAP server configuration)
+    ```bash
+    lxc import ldap-server.tar.xz
+    lxc list
+    ``` 
+  - run the LDAP server
+  ```bash
+  lxc start ldap-server
+  lxc list 
+  ``` 
+- Configure linux server (client) to user LDAP server information
+  - Install utility
+  ```bash
+  sudo apt install libnss-ldapd
+  ``` 
+  - After installed, need to typed in several steps:
+    1. `nslcd`
+       1. LDAP server IP address (the lxc container we just setup)
+       2. Distinguished name of the LDAP search base
+       3. Name services to configure (components that we will import from the LDAP server; e.g.: `passwd`, `group`, `shadow`)
+  - After finish setup, `etc/nsswitch.conf` will be created. This file is used to specify which name service switch (nss) module to use for different types of requests. In this case, we are using the `ldap` module for `passwd`, `group`, and `shadow` requests.
+    - Example, we may see line like:
+      - `passwd: files systemd ldap`
+        - Explain:
+          - `passwd`: request for user account information
+          - `files`: first check local files (e.g. `/etc/passwd`)
+          - `systemd`: check systemd for user account information
+          - `ldap`: check ldap server for user account information
+  - This defines the routing logic, but retrieving the LDAP information is the job of `nslcd` (name service local daemon) component that we have setup initially. Its configuration can be found in `etc/nslcd.conf`
+    - Example, domain components and the LDAP server API address is stored here.
+- We can check all the entries from all the sources (e.g. locally or from LDAP server) using the command `getent` (get entries)
+  - For example, we want to see all users available in our server using `getent passwd` (it will shows the users defined locally and defined by LDAP server)
+  - `getent` options
+    - `--service`: filter by source (e.g. `getent passwd --service ldap` will only shows the users that is defined from the LDAP server)
+- As we previously learned, each user will have its on home directory. How is this handled for hundreds or thousands of users in our LDAP server
+  - It will be very costly, if we need to create the configuration to all servers when the LDAP server is changed 
+  - We can use Pluggable Authentication Modules (PAM) to administrate every user that just logged in for the first time in that server
+    - to setup this, can run `sudo pam-auth-update`. tick the box "create home directory on login"
+    - to test simply login as one of the LDAP user. (e.g. `sudo login john`)
