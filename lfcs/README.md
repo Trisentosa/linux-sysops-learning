@@ -74,6 +74,8 @@
   - [Lab: Configure User Resource Limits and User Privileges](#lab-configure-user-resource-limits-and-user-privileges)
   - [Manage Access to Root Account](#manage-access-to-root-account)
   - [Configure the System to use LDAP User and Group Accounts](#configure-the-system-to-use-ldap-user-and-group-accounts)
+- [Networking](#networking)
+  - [Configure IPv4 and IPv6 Networking and Hostname Resolution](#configure-ipv4-and-ipv6-networking-and-hostname-resolution)
 
 # Introduction
 ## Course Link
@@ -2267,3 +2269,33 @@ virt-install \
   - We can use Pluggable Authentication Modules (PAM) to administrate every user that just logged in for the first time in that server
     - to setup this, can run `sudo pam-auth-update`. tick the box "create home directory on login"
     - to test simply login as one of the LDAP user. (e.g. `sudo login john`)
+
+# Networking
+
+## Configure IPv4 and IPv6 Networking and Hostname Resolution
+
+- Basic Concepts:
+  - IP address: 
+    - IP: Internet Protocol
+      - Address: unique identifier for a device on a network
+      - Version 4 (IPv4): 32-bit address, written as 4 decimal numbers separated by dots (e.g. 192.168.0.1)
+      - Version 6 (IPv6): 128-bit address, written as 8 groups of 4 hexadecimal digits separated by colons (e.g. 2001:0db8:85a3:0000:0000:8a2e:370:7334)
+        - ![ipv6_intro](./resources/screenshots/ipv6_intro.png)
+        - ![ipv6_shortening](./resources/screenshots/ipv6_shortening.png)
+  - CIDR: Classless Inter-Domain Routing
+    - Notation for specifying the network address and the subnet mask
+    - Written as IP address followed by a slash and the number of bits in the network address (e.g. 192.168.0.0/24)
+      - where 24 means that the first 24 bits of the IP address is the network address, and the remaining 8 bits is the host address
+      - ![cidr_notation](./resources/screenshots/cidr_notation.png)
+        - In the screenshot above (192.168.1.101/24)
+          - 192.168.1 is the network prefix
+          - 101 is the host identifier (specific device on this network)
+        - Can think network prefix like country code, and host identifier like phone number
+      - IPv6 also supports CIDR notation:
+        - ![ipv6_cidr](./resources/screenshots/ipv6_cidr.png)
+  - Subnet Mask: 
+    - Determines which part of the IP address is the network address and which part is the host address
+    - Written in dotted decimal notation (e.g. 255.255.255.0)
+    - Number of 1s in the subnet mask determines the number of hosts that can be on the network
+  - Default Gateway: 
+    - IP address of the router that is used to route traffic to other networks
