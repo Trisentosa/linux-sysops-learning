@@ -78,6 +78,8 @@
   - [Configure IPv4 and IPv6 Networking and Hostname Resolution](#configure-ipv4-and-ipv6-networking-and-hostname-resolution)
   - [Demo: Configure IPv4 and IPv6 Networking and Hostname Resolution](#demo-configure-ipv4-and-ipv6-networking-and-hostname-resolution)
   - [Start, Stop, and Check Status of Network Services](#start-stop-and-check-status-of-network-services)
+  - [Lab: Configure Networking, Start/Stop/Check Status of Network Services](#lab-configure-networking-startstopcheck-status-of-network-services)
+  - [Configure Bridge and Bonding Devices](#configure-bridge-and-bonding-devices)
 
 # Introduction
 ## Course Link
@@ -2336,3 +2338,12 @@ virt-install \
             - can check the process by `ps -p 1475`
             - can check list of open files by `lsof -p 1475`
   - `netstat`: older, might be discontinued in future linux version. Options are similar to `ss`
+
+## Lab: Configure Networking, Start/Stop/Check Status of Network Services
+TODO!
+![Lab: Configure Networking, Start/Stop/Check Status of Network Services](./labs/configure_networking_start_stop_check_status_of_network_services.bash)
+
+## Configure Bridge and Bonding Devices
+- What does `Bridge` and `Bond` means in networking ?
+  - `Bridge`: connect 2 network segments together
+  - `Bond`: connect 2 network interfaces together
