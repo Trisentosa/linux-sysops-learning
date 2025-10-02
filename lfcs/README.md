@@ -76,6 +76,8 @@
   - [Configure the System to use LDAP User and Group Accounts](#configure-the-system-to-use-ldap-user-and-group-accounts)
 - [Networking](#networking)
   - [Configure IPv4 and IPv6 Networking and Hostname Resolution](#configure-ipv4-and-ipv6-networking-and-hostname-resolution)
+  - [Demo: Configure IPv4 and IPv6 Networking and Hostname Resolution](#demo-configure-ipv4-and-ipv6-networking-and-hostname-resolution)
+  - [Start, Stop, and Check Status of Network Services](#start-stop-and-check-status-of-network-services)
 
 # Introduction
 ## Course Link
@@ -2299,3 +2301,38 @@ virt-install \
     - Number of 1s in the subnet mask determines the number of hosts that can be on the network
   - Default Gateway: 
     - IP address of the router that is used to route traffic to other networks
+
+## Demo: Configure IPv4 and IPv6 Networking and Hostname Resolution
+---
+
+## Start, Stop, and Check Status of Network Services
+- 2 main utilities we can use to inspect network services
+  - `ss`: more modern version
+    - common options: `-ltunp`
+      - `ss -ltunp`
+      - Explanation: 
+        - `-l`: listening
+        - `-t`: tcp
+        - `-u`: udp
+        - `-n`: numeric
+        - `-p`: process
+      - ![ss_ltunp](./resources/screenshots/ss_ltunp.png)
+      - How to read output:
+        - `Local Address:Port` column examples:
+          - `127.0.0.1:3306` means listening only localhost (127.0.0.1) on port 3306
+          - `*:22` means listening on all network interfaces (e.g. eth0, eth1, etc) on port 22
+          - `*` means all network interfaces
+          - `0.0.0.0:22` means listening on all network interfaces on port 22
+          - `0.0.0.0` means all network interfaces
+          - `::` means all network interfaces (for IPv6)
+          - `[::]:22` means listening on all network interfaces (for IPv6) on port 22 
+        - `Recv-Q` column: 
+          - means the data is waiting to be read (unit: bytes)
+        - `Send-Q` column:
+          - means the data is waiting to be sent (unit: bytes)
+        - `Process`
+          - e.g. `users:(("sshd",pid=1475,fd=3))` means the process `sshd` with pid 1475 is using file descriptor 3 to listen on port 22
+            - can check the service status by `systemctl status ssh.service` 
+            - can check the process by `ps -p 1475`
+            - can check list of open files by `lsof -p 1475`
+  - `netstat`: older, might be discontinued in future linux version. Options are similar to `ss`
